@@ -13,26 +13,31 @@ This document describes the complete setup, configuration, and troubleshooting s
 ⚙️ Actions Dashboard: GitHub Actions
 
 🧱 Project Stack
-Component	Version	Purpose
-Node.js	≥ v20	Runtime
-React	^18.3	UI framework
-Vite	^5.x	Build system
-TailwindCSS	^3.4	Styling
-gh-pages	^6.1	Manual deploy utility
-peaceiris/actions-gh-pages	v3	Automated GitHub Pages deploy
+Component Version Purpose
+Node.js ≥ v20 Runtime
+React ^18.3 UI framework
+Vite ^5.x Build system
+TailwindCSS ^3.4 Styling
+gh-pages ^6.1 Manual deploy utility
+peaceiris/actions-gh-pages v3 Automated GitHub Pages deploy
 🧩 1. Project Setup
+
 # Clone or create your folder
+
 cd C:\Users\sunil
 mkdir inlinenode
 cd inlinenode
 
 # Initialize project
+
 npm create vite@latest . -- --template react
 
 # Install dependencies
+
 npm install
 
 # Install Tailwind + PostCSS
+
 npm install -D tailwindcss postcss autoprefixer
 npx tailwindcss init -p
 
@@ -40,16 +45,15 @@ npx tailwindcss init -p
 
 tailwind.config.js
 
-/** @type {import('tailwindcss').Config} */
+/** @type {import('tailwindcss').Config} \*/
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: { extend: {} },
-  plugins: [],
+content: [
+"./index.html",
+"./src/**/\*.{js,ts,jsx,tsx}",
+],
+theme: { extend: {} },
+plugins: [],
 }
-
 
 src/index.css
 
@@ -57,11 +61,9 @@ src/index.css
 @tailwind components;
 @tailwind utilities;
 
-
 Run locally:
 
 npm run dev
-
 
 If you see the “InlineNode Works!” screen, Tailwind is properly linked.
 
@@ -74,8 +76,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  base: '/inlinenode/',   // Must match your GitHub repo name
+plugins: [react()],
+base: '/inlinenode/', // Must match your GitHub repo name
 })
 
 🧠 4. Add Deploy Scripts
@@ -84,17 +86,15 @@ Install gh-pages:
 
 npm install -D gh-pages
 
-
 Add scripts in package.json:
 
 "scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview",
-  "predeploy": "npm run build",
-  "deploy": "gh-pages -d dist"
+"dev": "vite",
+"build": "vite build",
+"preview": "vite preview",
+"predeploy": "npm run build",
+"deploy": "gh-pages -d dist"
 }
-
 
 ✅ JSON must be perfectly valid: double quotes only, commas only between properties.
 
@@ -113,20 +113,17 @@ Create folders:
 mkdir .github
 mkdir .github\workflows
 
-
 Add file .github/workflows/deploy.yml:
 
 name: Deploy to GitHub Pages
 on:
-  push:
-    branches:
-      - main
+push:
+branches: - main
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+build-and-deploy:
+runs-on: ubuntu-latest
+steps: - name: Checkout
+uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -143,7 +140,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-
 
 This workflow auto-builds and publishes your site whenever you push to main.
 
@@ -174,11 +170,11 @@ Save
 GitHub will now serve the site from the gh-pages branch.
 
 🧾 9. Common Fixes
-Error	Cause	Fix
-EJSONPARSE	Invalid JSON syntax	Fix commas/quotes in package.json
-Expected } but found :	Invalid Vite config	Use base: '/inlinenode/'
-Permission denied to github-actions[bot]	Insufficient permissions	Enable “Read and write permissions”
-No build output found	Missing npm run build step	Ensure npm ci && npm run build in workflow
+Error Cause Fix
+EJSONPARSE Invalid JSON syntax Fix commas/quotes in package.json
+Expected } but found : Invalid Vite config Use base: '/inlinenode/'
+Permission denied to github-actions[bot] Insufficient permissions Enable “Read and write permissions”
+No build output found Missing npm run build step Ensure npm ci && npm run build in workflow
 🚀 10. Deploy
 Automatic (via GitHub Actions)
 
@@ -188,12 +184,10 @@ git add .
 git commit -m "Trigger auto deploy"
 git push
 
-
 GitHub Actions will build and deploy automatically.
 
 Manual (via CLI)
 npm run deploy
-
 
 This directly pushes /dist to gh-pages.
 
@@ -203,17 +197,16 @@ Visit:
 
 https://<your-username>.github.io/inlinenode/
 
-
 If it displays your app (e.g., “InlineNode Works!”), the pipeline is complete.
 
 🧩 12. Current Project State
-Step	Status
-Tailwind Installed	✅
-JSON Valid	✅
-Vite Config Correct	✅
-GitHub Actions Working	✅
-Permissions Fixed	✅
-Pages Live	✅
+Step Status
+Tailwind Installed ✅
+JSON Valid ✅
+Vite Config Correct ✅
+GitHub Actions Working ✅
+Permissions Fixed ✅
+Pages Live ✅
 🧠 Notes for Future Phases
 
 CurveLab module will live inside /src/modules/CurveLab
@@ -231,8 +224,10 @@ CI/CD powered by GitHub Actions + Vite + TailwindCSS
 Maintained with enough caffeine to light up a 3-phase motor ⚡
 
 📌 Quick Commands Reference
-Action	Command
-Run Dev Server	npm run dev
-Build Locally	npm run build
-Manual Deploy	npm run deploy
-Push to GitHub	git add . && git commit -m "update" && git push
+Action Command
+Run Dev Server npm run dev
+Build Locally npm run build
+Manual Deploy npm run deploy
+Push to GitHub git add . && git commit -m "update" && git push
+
+added logo and favicon
