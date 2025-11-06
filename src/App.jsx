@@ -11,7 +11,7 @@ function App() {
           className="h-10 w-auto select-none"
           draggable="false"
         />
-        <h1 className="text-2xl font-semibold tracking-wide">InlineNode</h1>
+        {/*<h1 className="text-2xl font-semibold tracking-wide">InlineNode</h1>*/}
       </header>
 
       {/* --- MAIN --- */}
