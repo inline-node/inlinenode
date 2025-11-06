@@ -1,4 +1,4 @@
-import logo from "./assets/inline-node-logo.png";
+import logo from "./assets/InlineNode-logo.png";
 
 function App() {
   return (
