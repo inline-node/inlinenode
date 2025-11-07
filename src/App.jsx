@@ -1,5 +1,5 @@
 import logo from "./assets/InlineNode-logo.png";
-import logoSigil from "./public/favicon-96x96.png";
+import logoSigil from "./assets/sigil.png";
 
 function App() {
   return (
