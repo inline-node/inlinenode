@@ -1,4 +1,4 @@
-import logo from "./assets/InlineNode-logo.png";
+import logo from "./assets/logo.png";
 import sigil from "./assets/sigil.png";
 
 function App() {
@@ -23,11 +23,12 @@ function App() {
       </header>
 
       <main className="flex-1 flex items-center justify-center">
-        <h2 className="text-lg text-textDim">InlineNode. Work In Progress..😎</h2>
+        <h2 className="text-lg text-textDim">
+          InlineNode. Work In Progress..😎
+        </h2>
       </main>
     </div>
-  )
+  );
 }
 
-export default App
-
+export default App;
