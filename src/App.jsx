@@ -3,16 +3,20 @@ import logo from "./assets/logo.png";
 import sigil from "./assets/sigil.png";
 
 function App() {
-  const [darkMode, setDarkMode] = useState(false);
+  // Read saved theme or default to light
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    return saved === "dark"; // returns true if 'dark', false otherwise
+  });
 
   useEffect(() => {
     const html = document.querySelector("html");
     if (darkMode) {
       html.classList.add("dark");
-      console.log("🌙 Dark mode ON");
+      localStorage.setItem("theme", "dark");
     } else {
       html.classList.remove("dark");
-      console.log("☀️ Dark mode OFF");
+      localStorage.setItem("theme", "light");
     }
   }, [darkMode]);
 
