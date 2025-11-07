@@ -1,5 +1,5 @@
 import logo from "./assets/InlineNode-logo.png";
-import logoSigil from "./assets/sigil.png";
+import sigil from "./assets/sigil.png";
 
 function App() {
   return (
@@ -7,7 +7,7 @@ function App() {
       <header className="flex items-center p-4 border-b border-border bg-surface">
         {/* Full InlineNode logo for large and medium screens */}
         <img
-          src={logoFull}
+          src={logo}
           alt="InlineNode logo"
           className="hidden lg:block h-14 w-auto select-none"
           draggable="false"
@@ -15,7 +15,7 @@ function App() {
 
         {/* Sigil (the .^.) for small and medium screens */}
         <img
-          src={logoSigil}
+          src={sigil}
           alt="InlineNode sigil"
           className="block lg:hidden h-10 w-auto select-none"
           draggable="false"
