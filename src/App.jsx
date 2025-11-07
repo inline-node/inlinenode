@@ -4,15 +4,14 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
       {/* --- HEADER --- */}
-      <header className="flex items-center gap-3 p-4 border-b border-gray-800">
-        <img
-          src={logo}
-          alt="InlineNode logo"
-          className="h-14 w-auto select-none"
-          draggable="false"
-        />
-        {/*<h1 className="text-2xl font-semibold tracking-wide">InlineNode</h1>*/}
-      </header>
+      <header className="flex items-center p-4 border-b border-gray-800">
+      <img
+        src={logo}
+        alt="InlineNode logo"
+        className="h-14 w-auto select-none"
+        draggable="false"
+      />
+    </header>
 
       {/* --- MAIN --- */}
       <main className="flex-1 flex items-center justify-center">
