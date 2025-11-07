@@ -8,14 +8,14 @@ function App() {
       <img
         src={logo}
         alt="InlineNode logo"
-        className="h-14 w-auto select-none"
+        className="h-12 w-auto select-none"
         draggable="false"
       />
     </header>
 
       {/* --- MAIN --- */}
       <main className="flex-1 flex items-center justify-center">
-        <h2 className="text-lg text-gray-400">InlineNode. Is Loading...</h2>
+        <h2 className="text-lg text-gray-400">WORK IN PROGRESS</h2>
       </main>
     </div>
   );
