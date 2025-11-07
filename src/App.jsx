@@ -1,19 +1,34 @@
+import { useState, useEffect } from "react";
 import logo from "./assets/logo.png";
 import sigil from "./assets/sigil.png";
 
 function App() {
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const html = document.querySelector("html");
+    if (darkMode) {
+      html.classList.add("dark");
+      console.log("🌙 Dark mode ON");
+    } else {
+      html.classList.remove("dark");
+      console.log("☀️ Dark mode OFF");
+    }
+  }, [darkMode]);
+
   return (
-    <div className="min-h-screen bg-base text-text font-sans flex flex-col">
-      <header className="flex items-center p-4 border-b border-border bg-surface">
-        {/* Full InlineNode logo for large and medium screens */}
+    <div
+      className={`min-h-screen font-sans flex flex-col transition-colors duration-500
+      bg-base text-text dark:bg-darkBase dark:text-darkText`}
+    >
+      {/* HEADER */}
+      <header className="flex items-center p-4 border-b border-border bg-surface dark:bg-darkSurface dark:border-darkBorder shadow-sm">
         <img
           src={logo}
           alt="InlineNode logo"
           className="hidden lg:block h-14 w-auto select-none"
           draggable="false"
         />
-
-        {/* Sigil (the .^.) for small and medium screens */}
         <img
           src={sigil}
           alt="InlineNode sigil"
@@ -22,11 +37,21 @@ function App() {
         />
       </header>
 
-      <main className="flex-1 flex items-center justify-center">
-        <h2 className="text-lg text-textDim">
-          InlineNode. Work In Progress..😎
-        </h2>
+      {/* MAIN */}
+      <main className="flex-1 flex items-center justify-center text-textDim dark:text-darkTextDim">
+        <h2 className="text-lg">InlineNode. Work In Progress..😎</h2>
       </main>
+
+      {/* TOGGLE BUTTON */}
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        className="fixed bottom-4 left-4 p-2 rounded-full border border-border dark:border-darkBorder
+                   bg-surface dark:bg-darkSurface text-text dark:text-darkTextDim hover:text-accent 
+                   transition-all duration-300 shadow-sm"
+        aria-label="Toggle theme"
+      >
+        {darkMode ? "☀️" : "🌙"}
+      </button>
     </div>
   );
 }
