@@ -8,7 +8,7 @@ function App() {
         <img
           src={logo}
           alt="InlineNode logo"
-          className="h-10 w-auto select-none"
+          className="h-14 w-auto select-none"
           draggable="false"
         />
         {/*<h1 className="text-2xl font-semibold tracking-wide">InlineNode</h1>*/}
@@ -16,7 +16,7 @@ function App() {
 
       {/* --- MAIN --- */}
       <main className="flex-1 flex items-center justify-center">
-        <h2 className="text-lg text-gray-400">Welcome to InlineNode</h2>
+        <h2 className="text-lg text-gray-400">InlineNode. Is Loading...</h2>
       </main>
     </div>
   );
