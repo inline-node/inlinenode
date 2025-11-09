@@ -208,7 +208,7 @@ export default function VoltageDivider() {
           <div className="flex gap-3 mt-3">
             <button
               onClick={handleCalculate}
-              className="px-4 py-2 rounded-md font-medium bg-accent dark:bg-darkAccent text-gray-900 dark:text-gray-100 hover:opacity-95 transition-all"
+              className="px-4 py-2 rounded-md font-medium bg-[#a9df05] dark:bg-[#a9df05] text-gray-900 dark:text-gray-900 hover:opacity-95 transition-all"
             >
               Calculate
             </button>
