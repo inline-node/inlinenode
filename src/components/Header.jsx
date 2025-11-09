@@ -28,20 +28,20 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between p-4 border-b border-border dark:border-darkBorder bg-surface dark:bg-darkSurface shadow-sm">
       {/* Logo */}
-      <div className="flex items-center gap-3">
+      <Link to="/" className="flex items-center gap-3 select-none">
         <img
           src={logo}
           alt="InlineNode logo"
-          className="hidden lg:block h-14 w-auto select-none"
+          className="hidden lg:block h-14 w-auto hover:opacity-90 transition-opacity"
           draggable="false"
         />
         <img
           src={sigil}
           alt="InlineNode sigil"
-          className="block lg:hidden h-10 w-auto select-none"
+          className="block lg:hidden h-10 w-auto hover:opacity-90 transition-opacity"
           draggable="false"
         />
-      </div>
+      </Link>
 
       {/* Desktop Navigation */}
       <nav className="hidden lg:flex gap-6 items-center">
