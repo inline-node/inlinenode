@@ -1,11 +1,9 @@
 export default function ConsoleArea() {
   return (
-    <section className="border border-border dark:border-darkBorder rounded-lg p-4 font-mono text-sm">
-      <h2 className="text-xl font-semibold mb-2">Console Output</h2>
-      <div className="bg-surface dark:bg-darkSurface border border-border dark:border-darkBorder rounded p-2 h-40 overflow-y-auto">
-        <p className="text-textDim dark:text-darkTextDim">
-          (Calculation steps and derivations will appear here)
-        </p>
+    <section className="p-3 h-full flex flex-col font-mono text-sm">
+      <h2 className="text-lg font-semibold mb-2">Console</h2>
+      <div className="flex-1 border border-dashed border-border dark:border-darkBorder rounded p-2 overflow-y-auto text-textDim dark:text-darkTextDim">
+        > Console ready...
       </div>
     </section>
   );
