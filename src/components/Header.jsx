@@ -26,7 +26,7 @@ export default function Header() {
     }`;
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between p-4 border-b border-border dark:border-darkBorder bg-surface dark:bg-darkSurface shadow-sm">
+    <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-2 border-b border-border dark:border-darkBorder bg-surface dark:bg-darkSurface shadow-sm">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-3 select-none">
         <img
