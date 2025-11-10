@@ -7,15 +7,17 @@ import ConsoleArea from "./curvelab/ConsoleArea";
 export default function CurveLab() {
   return (
     <Layout>
-      {/* Full fixed grid without scroll */}
+      {/* Main fixed grid adjusted for header + footer */}
       <div
-        className="fixed inset-0 top-[72px] grid grid-rows-[2fr_1fr] grid-cols-[1.2fr_2fr] gap-[0.5rem] 
+        className="fixed inset-x-0 top-[72px] bottom-[48px] 
+                   grid grid-rows-[2fr_1fr] grid-cols-[1.2fr_2fr] gap-[0.5rem] 
                    bg-background text-text dark:bg-darkBackground dark:text-darkText p-[0.5rem]"
       >
         {/* Top row */}
         <div className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
           <DataInput />
         </div>
+
         <div className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
           <GraphArea />
         </div>
@@ -24,6 +26,7 @@ export default function CurveLab() {
         <div className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
           <OutputSummary />
         </div>
+
         <div className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
           <ConsoleArea />
         </div>
