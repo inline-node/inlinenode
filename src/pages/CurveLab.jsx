@@ -8,11 +8,11 @@ export default function CurveLab() {
   return (
     <Layout>
       {/* Main fixed grid adjusted for header + footer */}
-      <div
-        className="fixed inset-x-0 top-[72px] bottom-[48px] 
-                   grid grid-rows-[2fr_1fr] grid-cols-[1.2fr_2fr] gap-[0.5rem] 
-                   bg-background text-text dark:bg-darkBackground dark:text-darkText p-[0.5rem]"
-      >
+        <div
+          className="fixed inset-x-0 top-[76px] bottom-[52px]
+                     grid grid-rows-[2fr_1fr] grid-cols-[1.2fr_2fr] gap-[0.5rem]
+                     bg-background text-text dark:bg-darkBackground dark:text-darkText px-[0.75rem]"
+        >
         {/* Top row */}
         <div className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
           <DataInput />
