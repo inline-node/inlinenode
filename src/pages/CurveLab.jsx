@@ -85,23 +85,25 @@ function TabletCurveLab() {
 /* ---------------- MOBILE ---------------- */
 function MobileCurveLab() {
   const [activeTab, setActiveTab] = useState("graph");
+
   const tabs = [
     { key: "graph", label: "Graph", component: <GraphArea /> },
     { key: "data", label: "Data", component: <DataInput /> },
     { key: "results", label: "Results", component: <OutputSummary /> },
     { key: "console", label: "Console", component: <ConsoleArea /> },
   ];
+
   const current = tabs.find((t) => t.key === activeTab);
 
   return (
     <div className="absolute inset-x-0 top-[60px] bottom-[56px] flex flex-col bg-background dark:bg-darkBackground overflow-y-auto">
-      {/* Tab Bar */}
+      {/* MOBILE TAB BAR — smaller height */}
       <div className="flex justify-around border-b border-border dark:border-darkBorder bg-surface dark:bg-darkSurface sticky top-0 z-10">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 py-1 text-xs font-medium transition-colors ${
               activeTab === tab.key
                 ? "text-accent dark:text-darkAccent border-b-2 border-accent dark:border-darkAccent"
                 : "text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent"
@@ -112,8 +114,8 @@ function MobileCurveLab() {
         ))}
       </div>
 
-      {/* Active Tab */}
-      <div className="flex-1 p-3">{current?.component}</div>
+      {/* ACTIVE TAB CONTENT — removed flex-1 to avoid giant blank space */}
+      <div className="p-2 overflow-x-auto">{current?.component}</div>
     </div>
   );
 }
