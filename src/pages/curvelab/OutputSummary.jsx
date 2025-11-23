@@ -58,9 +58,7 @@ function buildRegressionReportText(result) {
   } else if (result.model === "polynomial") {
     const deg = (result.coefficients || []).length - 1;
     const parts = [];
-    for (let i = 0; i <= deg; i++) {
-      parts.push(`a${i} x^${i}`);
-    }
+    for (let i = 0; i <= deg; i++) parts.push(`a${i} x^${i}`);
     lines.push("  y = " + parts.join(" + "));
   } else if (result.model === "exponential") {
     lines.push("  y = a e^(b x)");
@@ -68,14 +66,15 @@ function buildRegressionReportText(result) {
     lines.push("  y = a x^b");
   } else if (result.model === "logarithmic") {
     const base = result.coefficients.base || "log10";
-    lines.push(`  y = a log_${base}(x) + b`);
+    lines.push(`  y = a ${base}(x) + b`);
   } else {
     lines.push("  " + (result.equation || "—"));
   }
   lines.push("");
 
-  /* COEFFICIENTS (raw) */
+  /* COEFFICIENTS WITH IMPLEMENTATION */
   lines.push("Coefficients:");
+
   if (result.model === "linear") {
     const m =
       result.coefficients?.m ??
@@ -96,7 +95,7 @@ function buildRegressionReportText(result) {
     lines.push("");
     const impl = arr.map((v, i) => `${formatNum(v)} x^${i}`).join(" + ");
     lines.push("Implementation:");
-    lines.push("  y = " + impl);
+    lines.push(`  y = ${impl}`);
   } else if (result.model === "exponential") {
     const { a, b } = result.coefficients;
     lines.push(`  a = ${formatNum(a)}`);
@@ -118,7 +117,7 @@ function buildRegressionReportText(result) {
     if (base) lines.push(`  base = ${base}`);
     lines.push("");
     lines.push("Implementation:");
-    lines.push(`  y = ${formatNum(a)} log_${base}(x) + ${formatNum(b)}`);
+    lines.push(`  y = ${formatNum(a)} ${base}(x) + ${formatNum(b)}`);
   }
 
   lines.push("");
@@ -283,9 +282,9 @@ export default function OutputSummary() {
 
   const renderCoefficientsUI = () => {
     if (!result.coefficients) return null;
-
     const coeffs = result.coefficients;
 
+    /* LINEAR */
     if (result.model === "linear") {
       const m = coeffs.m ?? coeffs.a ?? coeffs[1];
       const c = coeffs.c ?? coeffs.b ?? coeffs[0];
@@ -303,29 +302,73 @@ export default function OutputSummary() {
       );
     }
 
+    /* POLYNOMIAL */
     if (result.model === "polynomial") {
+      const arr = coeffs || [];
       return (
         <div className="mt-3">
           <div className="text-sm font-medium">Coefficients</div>
           <div className="mt-1 p-2 bg-surface/30 rounded text-sm">
-            {coeffs.map((v, i) => (
+            {arr.map((v, i) => (
               <div key={i}>
                 a{i}: {formatNum(v)}
               </div>
             ))}
+            <div className="mt-2 font-mono">
+              y = {arr.map((v, i) => `${formatNum(v)}x^${i}`).join(" + ")}
+            </div>
           </div>
         </div>
       );
     }
 
-    if (["exponential", "powerlaw", "logarithmic"].includes(result.model)) {
+    /* EXPONENTIAL */
+    if (result.model === "exponential") {
+      const { a, b } = coeffs;
       return (
         <div className="mt-3">
           <div className="text-sm font-medium">Coefficients</div>
           <div className="mt-1 p-2 bg-surface/30 rounded text-sm">
-            {"a" in coeffs && <div>a: {formatNum(coeffs.a)}</div>}
-            {"b" in coeffs && <div>b: {formatNum(coeffs.b)}</div>}
-            {"base" in coeffs && <div>base: {coeffs.base}</div>}
+            <div>a: {formatNum(a)}</div>
+            <div>b: {formatNum(b)}</div>
+            <div className="mt-2 font-mono">
+              y = {formatNum(a)} e^({formatNum(b)}x)
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* POWER LAW */
+    if (result.model === "powerlaw") {
+      const { a, b } = coeffs;
+      return (
+        <div className="mt-3">
+          <div className="text-sm font-medium">Coefficients</div>
+          <div className="mt-1 p-2 bg-surface/30 rounded text-sm">
+            <div>a: {formatNum(a)}</div>
+            <div>b: {formatNum(b)}</div>
+            <div className="mt-2 font-mono">
+              y = {formatNum(a)} x^({formatNum(b)})
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* LOGARITHMIC */
+    if (result.model === "logarithmic") {
+      const { a, b, base } = coeffs;
+      return (
+        <div className="mt-3">
+          <div className="text-sm font-medium">Coefficients</div>
+          <div className="mt-1 p-2 bg-surface/30 rounded text-sm">
+            <div>a: {formatNum(a)}</div>
+            <div>b: {formatNum(b)}</div>
+            {base && <div>base: {base}</div>}
+            <div className="mt-2 font-mono">
+              y = {formatNum(a)} {base}(x) + {formatNum(b)}
+            </div>
           </div>
         </div>
       );
@@ -338,7 +381,6 @@ export default function OutputSummary() {
     <div className="p-3 h-full overflow-auto">
       <h2 className="text-lg font-semibold">{model}</h2>
 
-      {/* Interpolation UI summary */}
       {result.model === "interpolation" &&
         (() => {
           const X = Array.isArray(result.x?.[0]) ? result.x[0] : result.x || [];
@@ -364,7 +406,6 @@ export default function OutputSummary() {
           );
         })()}
 
-      {/* Regression equation + coefficients */}
       {result.model !== "interpolation" && (
         <>
           <div className="mt-3">
@@ -378,13 +419,21 @@ export default function OutputSummary() {
         </>
       )}
 
-      {/* Statistics */}
       <div className="mt-3">
         <div className="text-sm font-medium">Statistics</div>
         <div className="mt-1 p-2 bg-surface/20 rounded text-sm">
           <div>R²: {result.stats ? formatNum(result.stats.r2) : "—"}</div>
           <div>RMSE: {result.stats ? formatNum(result.stats.rmse) : "—"}</div>
-          <div>n: {result.stats ? result.stats.n : "—"}</div>
+          <div>
+            n:{" "}
+            {result.model === "interpolation"
+              ? Array.isArray(result.y)
+                ? result.y.length
+                : "—"
+              : result.stats
+              ? result.stats.n
+              : "—"}
+          </div>
         </div>
       </div>
 
