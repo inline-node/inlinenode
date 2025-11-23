@@ -30,8 +30,11 @@ export default function VoltageDivider() {
     return `${ohms.toFixed(3)} Ω`;
   };
 
+  /* ============================================================
+     NEW: ALWAYS CALCULATE VOUT + CALCULATE MISSING FIELD
+  ============================================================ */
   const handleCalculate = () => {
-    setSteps([]); // clear previous steps
+    setSteps([]);
 
     const Vs = parseNum(vin);
     const R1 = parseNum(r1) * unitMultipliers[unitR1];
@@ -49,47 +52,82 @@ export default function VoltageDivider() {
       .filter(([_, v]) => !v)
       .map(([k]) => k);
 
-    if (missing.length !== 1) {
-      setSteps(["⚠️ Leave exactly one field empty to calculate it."]);
+    const newSteps = [];
+
+    /* ------------------------------------------------------------
+       ALWAYS COMPUTE VOUT FIRST WHEN Vin, R1, R2 ARE VALID
+    ------------------------------------------------------------ */
+    if (valid.vin && valid.r1 && valid.r2) {
+      const resultVout = Vs * (R2 / (R1 + R2));
+      newSteps.push("Vout = Vin × (R₂ / (R₁ + R₂))");
+      newSteps.push(`Substitute: Vout = ${Vs} × (${R2} / (${R1} + ${R2}))`);
+      newSteps.push(`Result: Vout = ${resultVout.toFixed(3)} V`);
+      setVout(resultVout.toFixed(3));
+    }
+
+    /* ------------------------------------------------------------
+       MORE THAN 1 EMPTY? → NOT ALLOWED
+    ------------------------------------------------------------ */
+    if (missing.length > 1) {
+      newSteps.push("⚠️ Please leave exactly ONE field empty.");
+      setSteps(newSteps);
       return;
     }
 
-    const newSteps = [];
-    let resultValue = "";
+    /* ------------------------------------------------------------
+       NONE MISSING? Already recalculated Vout. Done.
+    ------------------------------------------------------------ */
+    if (missing.length === 0) {
+      setSteps(newSteps);
+      return;
+    }
+
+    /* ------------------------------------------------------------
+       EXACTLY ONE MISSING → CALCULATE THAT ONE
+    ------------------------------------------------------------ */
+    const target = missing[0];
 
     try {
-      if (missing[0] === "vin") {
-        newSteps.push("Given: R₁, R₂, and Vout are known. We solve for Vin.");
-        newSteps.push("Formula: Vin = Vout × (R₁ + R₂) / R₂");
+      if (target === "vin") {
+        newSteps.push("Given R₁, R₂ and Vout. Solve for Vin:");
+        newSteps.push("Vin = Vout × (R₁ + R₂) / R₂");
+
         const res = (Vout * (R1 + R2)) / R2;
+
         newSteps.push(`Substitute: Vin = ${Vout} × (${R1} + ${R2}) / ${R2}`);
         newSteps.push(`Result: Vin = ${res.toFixed(3)} V`);
         setVin(res.toFixed(3));
-        resultValue = `Vin = ${res.toFixed(3)} V`;
-      } else if (missing[0] === "vout") {
-        newSteps.push("Given: Vin, R₁, and R₂ are known. We solve for Vout.");
-        newSteps.push("Formula: Vout = Vin × (R₂ / (R₁ + R₂))");
-        const res = Vs * (R2 / (R1 + R2));
-        newSteps.push(`Substitute: Vout = ${Vs} × (${R2} / (${R1} + ${R2}))`);
-        newSteps.push(`Result: Vout = ${res.toFixed(3)} V`);
-        setVout(res.toFixed(3));
-        resultValue = `Vout = ${res.toFixed(3)} V`;
-      } else if (missing[0] === "r1") {
-        newSteps.push("Given: Vin, R₂, and Vout are known. We solve for R₁.");
-        newSteps.push("Formula: R₁ = R₂ × (Vin / Vout − 1)");
+      } else if (target === "vout") {
+        // If Vout wasn't computed earlier (R1/R2/Vin incomplete)
+        if (!(valid.vin && valid.r1 && valid.r2)) {
+          newSteps.push("Given Vin, R₁ and R₂. Solve for Vout:");
+
+          const res = Vs * (R2 / (R1 + R2));
+
+          newSteps.push(`Substitute: Vout = ${Vs} × (${R2} / (${R1} + ${R2}))`);
+          newSteps.push(`Result: Vout = ${res.toFixed(3)} V`);
+          setVout(res.toFixed(3));
+        }
+      } else if (target === "r1") {
+        newSteps.push("Given Vin, R₂ and Vout. Solve for R₁:");
+        newSteps.push("R₁ = R₂ × (Vin / Vout − 1)");
+
         const res = R2 * (Vs / Vout - 1);
+
         newSteps.push(`Substitute: R₁ = ${R2} × (${Vs} / ${Vout} − 1)`);
         newSteps.push(`Result: R₁ = ${formatRes(res)}`);
+
         setR1((res / unitMultipliers[unitR1]).toFixed(4));
-        resultValue = `R₁ = ${formatRes(res)}`;
-      } else if (missing[0] === "r2") {
-        newSteps.push("Given: Vin, R₁, and Vout are known. We solve for R₂.");
-        newSteps.push("Formula: R₂ = (R₁ × Vout) / (Vin − Vout)");
+      } else if (target === "r2") {
+        newSteps.push("Given Vin, R₁ and Vout. Solve for R₂:");
+        newSteps.push("R₂ = (R₁ × Vout) / (Vin − Vout)");
+
         const res = (R1 * Vout) / (Vs - Vout);
+
         newSteps.push(`Substitute: R₂ = (${R1} × ${Vout}) / (${Vs} − ${Vout})`);
         newSteps.push(`Result: R₂ = ${formatRes(res)}`);
+
         setR2((res / unitMultipliers[unitR2]).toFixed(4));
-        resultValue = `R₂ = ${formatRes(res)}`;
       }
     } catch (err) {
       newSteps.push(`⚠️ Error: ${err.message}`);
@@ -212,6 +250,7 @@ export default function VoltageDivider() {
             >
               Calculate
             </button>
+
             <button
               onClick={resetAll}
               className="px-3 py-2 rounded-md font-medium border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all"
