@@ -2,19 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Redirecting...</title>
-    <meta http-equiv="refresh" content="0; url=/" />
+    <title>Redirecting…</title>
+
     <script>
-      // Preserve the full path for React Router
-      const path =
-        window.location.pathname +
-        window.location.search +
-        window.location.hash;
-      const redirect = "/" + "#" + path;
-      window.location.replace(redirect);
+      // Preserve the full original URL
+      // GitHub Pages sends all unknown routes here
+      // so we store the actual URL, then forward the browser to "/"
+      // where index.html will restore the correct route.
+
+      sessionStorage.__redirect = window.location.pathname + window.location.search + window.location.hash;
+
+      // Send user to the SPA entry point
+      window.location.replace("/");
     </script>
   </head>
+
   <body>
-    Redirecting...
+    Redirecting…
   </body>
 </html>
