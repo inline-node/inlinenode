@@ -38,5 +38,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        const redirect = sessionStorage.__redirect;
+        if (redirect) {
+          sessionStorage.removeItem("__redirect");
+          window.history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
   </body>
 </html>
