@@ -1,4 +1,3 @@
-// src/pages/curvelab/OutputSummary.jsx
 import React, { useEffect, useState } from "react";
 
 /* ---------------- Formatting helpers ---------------- */
@@ -48,7 +47,9 @@ function buildInterpolationSegmentsFromPoints(points) {
 function buildRegressionReportText(result) {
   const lines = [];
   const model = (result.model || "MODEL").toUpperCase();
-  lines.push(`${model} REPORT`);
+  lines.push(`InlineNode CurveLab — ${model} REPORT`);
+  lines.push(`Generated on: ${new Date().toLocaleString()}`);
+  lines.push("https://inlinenode.com/curvelab");
   lines.push("");
 
   /* EQUATION (symbolic only!) */
@@ -132,7 +133,9 @@ function buildRegressionReportText(result) {
 
 function buildInterpolationReportText(result) {
   const lines = [];
-  lines.push("INTERPOLATION REPORT");
+  lines.push("InlineNode CurveLab — INTERPOLATION REPORT");
+  lines.push(`Generated on: ${new Date().toLocaleString()}`);
+  lines.push("https://inlinenode.com/curvelab");
   lines.push("");
 
   let pts = [];
@@ -206,40 +209,24 @@ export default function OutputSummary() {
   }, []);
 
   const downloadFull = () => {
-    const now = new Date();
-    const timestamp = now.toLocaleString();
-    const url = window.location.href;
-  
-    const header = [
-      "InlineNode – CurveLab Report",
-      `Generated: ${timestamp}`,
-      `URL: ${url}`,
-      "",
-      "----------------------------------------",
-      ""
-    ].join("\n");
-  
-    const body = result
-      ? result.model === "interpolation"
+    const txt =
+      result && result.model === "interpolation"
         ? buildInterpolationReportText(result)
-        : buildRegressionReportText(result)
-      : "No result";
-  
-    const txt = header + body;
-  
+        : buildRegressionReportText(result);
+
     const blob = new Blob([txt], {
       type: "text/plain;charset=utf-8",
     });
-  
-    const downloadUrl = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = downloadUrl;
+    a.href = url;
     a.download = `curvelab_report_${result.model || "report"}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(downloadUrl);
+    URL.revokeObjectURL(url);
   };
+
   /* ---------------- UI RENDER ---------------- */
 
   if (!result) {
@@ -380,7 +367,7 @@ export default function OutputSummary() {
           <div className="mt-1 p-2 bg-surface/30 rounded text-sm">
             <div>a: {formatNum(a)}</div>
             <div>b: {formatNum(b)}</div>
-            {base && <div>base: {base}</div>}
+            <div>base: {base}</div>
             <div className="mt-2 font-mono">
               y = {formatNum(a)} {base}(x) + {formatNum(b)}
             </div>
