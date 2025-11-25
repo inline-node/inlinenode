@@ -54,47 +54,75 @@ function evalPolynomial(coeffs, x) {
   return coeffs.reduce((sum, c, p) => sum + c * Math.pow(x, p), 0);
 }
 
-function sampleCurvePerX(modelResult, xValues, sampleCount = 300) {
-  if (!modelResult?.ok || !xValues?.length) return { xs: [], ys: [] };
+// sample a fit result into dense X,Y pairs for plotting
+function sampleCurve(result, xArr, sampleCount = 300) {
+  if (!result || !result.ok) return { xs: [], ys: [] };
 
-  const coeffs = modelResult.coefficients || {};
-  const model = modelResult.model;
+  const model = result.model;
+  const coeffs = result.coefficients || {};
+  const X = Array.isArray(xArr) ? xArr : [];
 
-  const min = Math.min(...xValues);
-  const max = Math.max(...xValues);
-  if (!isFinite(min) || !isFinite(max)) return { xs: [], ys: [] };
+  if (!X.length) return { xs: [], ys: [] };
+
+  const xmin = Math.min(...X);
+  const xmax = Math.max(...X);
+  if (!isFinite(xmin) || !isFinite(xmax)) return { xs: [], ys: [] };
 
   const xs = [];
   const ys = [];
 
   for (let i = 0; i < sampleCount; i++) {
     const t = i / (sampleCount - 1);
-    const xv = min + (max - min) * t;
+    const xv = xmin + (xmax - xmin) * t;
     let yv = NaN;
 
-    if (model === "linear") {
-      const m = coeffs.m ?? coeffs.a ?? (Array.isArray(coeffs) ? coeffs[1] : undefined);
-      const c = coeffs.c ?? coeffs.b ?? (Array.isArray(coeffs) ? coeffs[0] : undefined);
-      if (m !== undefined && c !== undefined) yv = m * xv + c;
-    } else if (model === "polynomial") {
-      yv = evalPolynomial(coeffs, xv);
-    } else if (model === "exponential") {
-      if (coeffs.a != null && coeffs.b != null) yv = coeffs.a * Math.exp(coeffs.b * xv);
-    } else if (model === "powerlaw") {
-      if (coeffs.a != null && coeffs.b != null) yv = coeffs.a * Math.pow(xv, coeffs.b);
-    } else if (model === "logarithmic") {
-      const base = coeffs.base || "log10";
-      const logFn =
-        base === "ln" ? Math.log : base === "log2" ? Math.log2 : Math.log10;
-      if (coeffs.a != null && coeffs.b != null) yv = coeffs.a * logFn(xv) + coeffs.b;
+    if (model === "polynomial") {
+      if (Array.isArray(coeffs)) {
+        yv = coeffs.reduce((s, c, p) => s + c * Math.pow(xv, p), 0);
+      }
     }
 
-    xs.push(xv);
-    ys.push(yv);
+    else if (model === "linear") {
+      // handle both single and multivariable
+      if (Array.isArray(coeffs)) {
+        // coeffs = [c, m1, m2, ...]
+        yv = coeffs[0];
+        for (let k = 1; k < coeffs.length; k++) {
+          yv += coeffs[k] * xv;
+        }
+      } else {
+        const m = coeffs.m ?? coeffs.a ?? coeffs[1];
+        const c = coeffs.c ?? coeffs.b ?? coeffs[0];
+        if (m !== undefined && c !== undefined) yv = m * xv + c;
+      }
+    }
+
+    else if (model === "exponential") {
+      if (coeffs.a != null && coeffs.b != null)
+        yv = coeffs.a * Math.exp(coeffs.b * xv);
+    }
+
+    else if (model === "powerlaw") {
+      if (coeffs.a != null && coeffs.b != null)
+        yv = coeffs.a * Math.pow(xv, coeffs.b);
+    }
+
+    else if (model === "logarithmic") {
+      const base = coeffs.base || result.logBase || "log10";
+      const logFn =
+        base === "ln" ? Math.log : base === "log2" ? Math.log2 : Math.log10;
+      if (coeffs.a != null && coeffs.b != null)
+        yv = coeffs.a * logFn(xv) + coeffs.b;
+    }
+
+    // interpolation handled elsewhere
+    xs.push(Number(xv));
+    ys.push(Number(yv));
   }
 
   return { xs, ys };
 }
+
 
 /* ------------------------------------------------------------
    Build datasets (MAIN FEATURE!)
