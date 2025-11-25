@@ -159,24 +159,28 @@ function buildDatasets(result) {
     }
 
     if (fit && fit.model !== "interpolation") {
-      const { xs, ys } = sampleCurvePerX(fit, xcol, 300);
-
-      const curve = xs.map((xv, index) => ({
-        x: xv,
-        y: ys[index],
-      }));
-
-      datasets.push({
-        label: `Fit — ${labelX}`,
-        data: curve,
-        showLine: true,
-        borderColor: color,
-        backgroundColor: color,
-        pointRadius: 0,
-        tension: fit.model === "linear" ? 0 : 0.25,
-        borderWidth: 2,
-        order: 1,
-      });
+      // ONLY draw the primary curve if there is exactly ONE X column
+      if (result.x.length === 1) {
+        const { xs, ys } = sampleCurve(result, result.x[0], 300);
+        if (xs.length) {
+          const fitPts = xs.map((xv, idx) => ({
+            x: xv,
+            y: ys[idx],
+          }));
+          datasets.push({
+            label: `Fit — ${xKeys[0] || "X"}`,
+            data: fitPts,
+            showLine: true,
+            fill: false,
+            borderColor: "#3b82f6",
+            backgroundColor: "#3b82f6",
+            pointRadius: 0,
+            tension: result.model === "linear" ? 0 : 0.25,
+            borderWidth: 2,
+            order: 1,
+          });
+        }
+      }
     }
 
     /* --- 3. Interpolation (only for X1) --- */
@@ -190,8 +194,8 @@ function buildDatasets(result) {
         label: `Interpolation — ${labelX}`,
         data: pts.sort((a, b) => a.x - b.x),
         showLine: true,
-        borderColor: color,
-        backgroundColor: color,
+        borderColor: "#3b82f6",
+        backgroundColor: "#3b82f6",
         pointRadius: 0,
         tension: 0,
         borderWidth: 2,
