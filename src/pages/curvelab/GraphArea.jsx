@@ -1,3 +1,4 @@
+// src/pages/curvelab/GraphArea.jsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   Chart as ChartJS,
@@ -12,6 +13,7 @@ import {
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 import { Scatter } from "react-chartjs-2";
+import runModel from "../../engine/mathEngine"; // used to compute per-X fits when possible
 
 ChartJS.register(
   LinearScale,
@@ -26,23 +28,32 @@ ChartJS.register(
 );
 
 /*
-  Visual rules:
-  - Data points: CYAN (#0ea5e9)
-  - Fit curves (all models, incl interpolation): ORANGE (#f97316)
-  - Overlays: dashed orange
+  New visual rules:
+  - Each X column gets a distinct color. Both its data points and its fit share that color.
+  - Interpolation uses the first X column color.
+  - Gridlines are subtle and theme aware.
+  - No overlays. No surprises.
 */
 
-const COLOR_DATA = "#0ea5e9";
-const COLOR_FIT = "#f97316";
-const COLOR_OVERLAY = "#f97316";
+const PALETTE = [
+  "#f97316", // orange
+  "#10b981", // green
+  "#3b82f6", // blue
+  "#eab308", // yellow
+  "#ec4899", // pink
+  "#8b5cf6", // purple
+  "#06b6d4", // teal
+  "#fb7185", // rose
+];
 
-function extractLinearCoeffs(coeffs) {
-  if (!coeffs) return null;
-  if (coeffs.m != null && coeffs.c != null) return { m: coeffs.m, c: coeffs.c };
-  if (coeffs.a != null && coeffs.b != null) return { m: coeffs.a, c: coeffs.b };
-  if (Array.isArray(coeffs) && coeffs.length >= 2)
-    return { m: coeffs[1], c: coeffs[0] };
-  return null;
+// helper: pick theme-aware grid color
+function gridColor() {
+  try {
+    const isDark = document.documentElement.classList.contains("dark");
+    return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  } catch {
+    return "rgba(0,0,0,0.06)";
+  }
 }
 
 function evalPolynomial(coeffArray, xv) {
@@ -50,20 +61,22 @@ function evalPolynomial(coeffArray, xv) {
   return coeffArray.reduce((s, c, p) => s + c * Math.pow(xv, p), 0);
 }
 
-function sampleCurve(result, sampleCount = 300) {
+// sample a fit result into dense X,Y pairs for plotting
+function sampleCurve(result, xArr, sampleCount = 300) {
   if (!result || !result.ok) return { xs: [], ys: [] };
 
   const model = result.model;
-  const xCols = result.x || [];
-  const X = xCols[0] || [];
+  const coeffs = result.coefficients || {};
+  const X = Array.isArray(xArr) ? xArr : [];
+
   if (!X.length) return { xs: [], ys: [] };
 
   const xmin = Math.min(...X);
   const xmax = Math.max(...X);
+  if (!isFinite(xmin) || !isFinite(xmax)) return { xs: [], ys: [] };
+
   const xs = [];
   const ys = [];
-
-  const coeffs = result.coefficients;
 
   for (let i = 0; i < sampleCount; i++) {
     const t = i / (sampleCount - 1);
@@ -71,177 +84,152 @@ function sampleCurve(result, sampleCount = 300) {
     let yv = NaN;
 
     if (model === "polynomial") {
-      yv = evalPolynomial(coeffs, xv);
+      yv = evalPolynomial(Array.isArray(coeffs) ? coeffs : coeffs.array, xv);
     } else if (model === "linear") {
-      const lc = extractLinearCoeffs(coeffs);
-      if (lc) yv = lc.m * xv + lc.c;
-      else if (result.yPred && result.yPred.length === X.length) {
-        // fallback interpolation from predicted
-        const iPos = ((xv - xmin) / (xmax - xmin)) * (X.length - 1);
-        const i0 = Math.floor(iPos),
-          i1 = Math.min(X.length - 1, i0 + 1);
-        const tfrac = iPos - i0;
-        yv =
-          result.yPred.length && result.yPred[i0] !== undefined
-            ? result.yPred[i0] * (1 - tfrac) + result.yPred[i1] * tfrac
-            : NaN;
-      }
+      const m =
+        coeffs.m ?? coeffs.a ?? (Array.isArray(coeffs) ? coeffs[1] : undefined);
+      const c =
+        coeffs.c ?? coeffs.b ?? (Array.isArray(coeffs) ? coeffs[0] : undefined);
+      if (m !== undefined && c !== undefined) yv = m * xv + c;
     } else if (model === "exponential") {
-      if (coeffs && coeffs.a != null && coeffs.b != null)
-        yv = coeffs.a * Math.exp(coeffs.b * xv);
+      if (coeffs.a != null && coeffs.b != null) yv = coeffs.a * Math.exp(coeffs.b * xv);
     } else if (model === "powerlaw") {
-      if (coeffs && coeffs.a != null && coeffs.b != null)
-        yv = coeffs.a * Math.pow(xv, coeffs.b);
+      if (coeffs.a != null && coeffs.b != null) yv = coeffs.a * Math.pow(xv, coeffs.b);
     } else if (model === "logarithmic") {
-      const base = coeffs?.base || result?.logBase || "log10";
-      const logFn =
-        base === "ln" ? Math.log : base === "log2" ? Math.log2 : Math.log10;
-      if (coeffs && coeffs.a != null && coeffs.b != null)
-        yv = coeffs.a * logFn(xv) + coeffs.b;
+      const base = coeffs.base || result.logBase || "log10";
+      const logFn = base === "ln" ? Math.log : base === "log2" ? Math.log2 : Math.log10;
+      if (coeffs.a != null && coeffs.b != null) yv = coeffs.a * logFn(xv) + coeffs.b;
     } else if (model === "interpolation") {
-      // guard: interpolation returns points (x,y), so we'll sample by linear segments
-      if (result.points && result.points.length) {
-        // not used here — handled separately
-      }
+      // interpolation is handled by explicit seg/points plotting
+      yv = NaN;
     }
 
     xs.push(Number(xv));
     ys.push(Number(yv));
   }
-
   return { xs, ys };
 }
 
-function buildDatasets(primaryResult, overlayResults = []) {
-  if (!primaryResult || !primaryResult.ok) return { datasets: [], meta: {} };
+// Build Chart.js datasets: one data scatter + its fit line per X column
+function buildDatasetsForAllX(result) {
+  if (!result || !result.ok) return { datasets: [] };
 
   const datasets = [];
-  const xCols = primaryResult.x || [];
-  const yArr = primaryResult.y || [];
-  const xKeys = primaryResult.xKeys || [];
+  const xCols = result.x || [];
+  const yArr = result.y || [];
+  const xKeys = result.xKeys || [];
 
-  // Data scatter(s) - always cyan
+  // for each X column: scatter + attempt a fit
   for (let ci = 0; ci < xCols.length; ci++) {
-    const pts = [];
-    for (let i = 0; i < xCols[ci].length; i++) {
-      pts.push({ x: Number(xCols[ci][i]), y: Number(yArr[i]) });
-    }
+    const xcol = xCols[ci] || [];
+    const color = PALETTE[ci % PALETTE.length];
+
+    // Data scatter
+    const pts = xcol.map((xv, i) => ({
+      x: Number(xv),
+      y: Number(yArr[i]),
+    }));
     datasets.push({
       label: `Data — ${xKeys[ci] || `X${ci + 1}`}`,
       data: pts,
       showLine: false,
       pointRadius: 3,
-      backgroundColor: COLOR_DATA,
-      borderColor: COLOR_DATA,
+      backgroundColor: color,
+      borderColor: color,
       order: 2,
+      // use circle point style for clarity
+      pointStyle: "circle",
     });
-  }
 
-  // Primary fit (orange)
-  if (primaryResult.model && primaryResult.model !== "interpolation") {
-    const { xs, ys } = sampleCurve(primaryResult, 300);
-    if (xs.length) {
-      const pts = xs.map((xv, i) => ({ x: xv, y: ys[i] }));
-      datasets.push({
-        label: `Fit — ${primaryResult.model}`,
-        data: pts,
-        showLine: true,
-        fill: false,
-        borderColor: COLOR_FIT,
-        backgroundColor: COLOR_FIT,
-        pointRadius: 0,
-        tension: primaryResult.model === "linear" ? 0 : 0.25,
-        order: 1,
+    // Attempt to compute a fit for this X column:
+    // If primary result includes _sourceRows/_sourceColumns we can run a per-X fit safely.
+    // Otherwise, try to synthesize rows from arrays and run model.
+    let fitResult = null;
+    try {
+      const cfg = window.__curvelab_modelConfig || JSON.parse(localStorage.getItem("curvelab.modelConfig") || "{}") || { model: result.model || "linear" };
+
+      // create minimal rows + columns for single X
+      const syntheticCols = [{ key: "Y", label: "Y" }, { key: "X", label: xKeys[ci] || `X${ci + 1}` }];
+      const syntheticRows = xcol.map((xv, i) => {
+        return { Y: yArr[i], X: xv };
       });
-    } else if (
-      primaryResult.yPred &&
-      xCols[0] &&
-      primaryResult.yPred.length === xCols[0].length
-    ) {
-      const pts = xCols[0].map((xv, i) => ({
-        x: Number(xv),
-        y: Number(primaryResult.yPred[i]),
-      }));
-      datasets.push({
-        label: `Fit — ${primaryResult.model}`,
-        data: pts,
-        showLine: true,
-        fill: false,
-        borderColor: COLOR_FIT,
-        backgroundColor: COLOR_FIT,
-        pointRadius: 0,
-        tension: 0.25,
-        order: 1,
-      });
+
+      // runModel will validate and either compute or return an error object
+      const out = runModel(syntheticRows, syntheticCols, cfg);
+      if (out && out.ok) fitResult = out;
+      else fitResult = null;
+    } catch (err) {
+      fitResult = null;
     }
-  } else if (primaryResult.model === "interpolation" && primaryResult.points) {
-    const pts = primaryResult.points.map((p) => ({ x: p.x, y: p.y }));
-    datasets.push({
-      label: "Interpolation (primary)",
-      data: pts,
-      showLine: true,
-      fill: false,
-      borderColor: COLOR_FIT,
-      backgroundColor: COLOR_FIT,
-      pointRadius: 0,
-      tension: 0,
-      order: 1,
-    });
-  }
 
-  // Overlays (dashed orange)
-  overlayResults.forEach((res, idx) => {
-    if (!res || !res.ok) return;
-    if (res.model === "interpolation" && res.points) {
-      const pts = res.points.map((p) => ({ x: p.x, y: p.y }));
-      datasets.push({
-        label: `Overlay interp ${idx + 1}`,
-        data: pts,
-        showLine: true,
-        fill: false,
-        borderColor: COLOR_OVERLAY,
-        backgroundColor: COLOR_OVERLAY,
-        pointRadius: 0,
-        tension: 0,
-        borderDash: [6, 4],
-        order: 1,
-      });
-    } else {
-      const { xs, ys } = sampleCurve(res, 300);
+    // If fitResult exists and provides sampleable curve -> draw it
+    if (fitResult && fitResult.model !== "interpolation") {
+      const { xs, ys } = sampleCurve(fitResult, xcol, 300);
       if (xs.length) {
-        const pts = xs.map((xv, i) => ({ x: xv, y: ys[i] }));
+        const fitPts = xs.map((xv, i) => ({ x: xv, y: ys[i] }));
         datasets.push({
-          label: `Overlay fit ${idx + 1}`,
-          data: pts,
+          label: `Fit — ${xKeys[ci] || `X${ci + 1}`}`,
+          data: fitPts,
           showLine: true,
           fill: false,
-          borderColor: COLOR_OVERLAY,
-          backgroundColor: COLOR_OVERLAY,
+          borderColor: color,
+          backgroundColor: color,
           pointRadius: 0,
-          tension: res.model === "linear" ? 0 : 0.25,
-          borderDash: [6, 4],
+          tension: fitResult.model === "linear" ? 0 : 0.25,
+          borderWidth: 2,
+          order: 1,
+        });
+      } else if (fitResult.yPred && fitResult.yPred.length === xcol.length) {
+        // fallback: plot predicted points in order of X column
+        const predPts = xcol.map((xv, i) => ({ x: Number(xv), y: Number(fitResult.yPred[i]) }));
+        datasets.push({
+          label: `Fit — ${xKeys[ci] || `X${ci + 1}`}`,
+          data: predPts,
+          showLine: true,
+          fill: false,
+          borderColor: color,
+          backgroundColor: color,
+          pointRadius: 0,
+          tension: 0.25,
+          borderWidth: 2,
           order: 1,
         });
       }
     }
-  });
 
-  return {
-    datasets,
-    meta: { xKeys: xKeys[0] || "X", model: primaryResult.model },
-  };
+    // Interpolation: if user used interpolation as model, plot piecewise lines using first X only
+    if (result.model === "interpolation" && ci === 0) {
+      // result.points may exist (x,y)
+      const ptsInterp = result.points && result.points.length
+        ? result.points.map((p) => ({ x: Number(p.x), y: Number(p.y) }))
+        : xcol.map((xv, i) => ({ x: Number(xv), y: Number(yArr[i]) }));
+      datasets.push({
+        label: `Interpolation — ${xKeys[ci] || `X${ci + 1}`}`,
+        data: ptsInterp.sort((a,b)=>a.x-b.x),
+        showLine: true,
+        fill: false,
+        borderColor: color,
+        backgroundColor: color,
+        pointRadius: 0,
+        tension: 0,
+        borderWidth: 2,
+        order: 1,
+      });
+    }
+  }
+
+  return { datasets };
 }
 
 export default function GraphArea() {
   const chartRef = useRef(null);
   const [primaryResult, setPrimaryResult] = useState(null);
-  const [overlays, setOverlays] = useState([]);
   const [status, setStatus] = useState("No data yet");
   const [datasets, setDatasets] = useState([]);
   const [xLabel, setXLabel] = useState("X");
   const [yLabel, setYLabel] = useState("Y");
 
-  // Listen to model result (fit) and preview
+  // Listen to model result (fit) and preview events
   useEffect(() => {
     const onModelResult = (ev) => {
       const res = ev.detail;
@@ -255,7 +243,6 @@ export default function GraphArea() {
       }
       setPrimaryResult(res);
       setStatus(`Computed ${res.model || "model"}`);
-      // Use xKeys from model; don't let preview override this later
       if (res.xKeys && res.xKeys[0]) setXLabel(res.xKeys[0]);
       else setXLabel("X");
       setYLabel("Y");
@@ -290,26 +277,15 @@ export default function GraphArea() {
     // eslint-disable-next-line
   }, []);
 
-  // Build datasets whenever primaryResult or overlays change
+  // build datasets when primary result changes
   useEffect(() => {
     if (!primaryResult) {
       setDatasets([]);
       return;
     }
-    const { datasets: ds } = buildDatasets(primaryResult, overlays);
-    setDatasets(ds);
-  }, [primaryResult, overlays]);
-
-  const addOverlayFromPrimary = () => {
-    if (!primaryResult) return;
-    setOverlays((o) => [...o, primaryResult]);
-    setStatus((s) => `${s} — overlay added`);
-  };
-
-  const clearOverlays = () => {
-    setOverlays([]);
-    setStatus((s) => s.replace(" — overlay added", ""));
-  };
+    const { datasets: ds } = buildDatasetsForAllX(primaryResult);
+    setDatasets(ds || []);
+  }, [primaryResult]);
 
   const exportPNG = () => {
     const chart = chartRef.current;
@@ -341,7 +317,7 @@ export default function GraphArea() {
     responsive: true,
     maintainAspectRatio: false,
     layout: {
-      padding: { top: 8, right: 8, bottom: 36, left: 8 }, // bottom padding ensures X label fits
+      padding: { top: 8, right: 8, bottom: 36, left: 8 },
     },
     plugins: {
       legend: {
@@ -354,9 +330,7 @@ export default function GraphArea() {
             const x = context.raw?.x;
             const y = context.raw?.y;
             if (x === undefined || y === undefined) return "";
-            return `x: ${Number(x).toPrecision(6)}, y: ${Number(y).toPrecision(
-              6
-            )}`;
+            return `x: ${Number(x).toPrecision(6)}, y: ${Number(y).toPrecision(6)}`;
           },
         },
       },
@@ -374,10 +348,12 @@ export default function GraphArea() {
         type: "linear",
         title: { display: true, text: xLabel, padding: { top: 6 } },
         ticks: { precision: 3 },
+        grid: { color: gridColor() },
       },
       y: {
         type: "linear",
         title: { display: true, text: yLabel, padding: { bottom: 6 } },
+        grid: { color: gridColor() },
       },
     },
     interaction: { mode: "nearest", axis: "xy", intersect: false },
@@ -389,22 +365,6 @@ export default function GraphArea() {
         <h2 className="text-lg font-semibold">Graph</h2>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={addOverlayFromPrimary}
-            disabled={!primaryResult}
-            className="px-3 py-1 rounded-md font-medium border border-border bg-transparent text-textDim hover:text-accent transition-all text-sm"
-            title="Add current fit to overlays"
-          >
-            Add Overlay
-          </button>
-
-          <button
-            onClick={clearOverlays}
-            className="px-3 py-1 rounded-md font-medium border border-border bg-transparent text-textDim hover:text-accent transition-all text-sm"
-          >
-            Clear Overlays
-          </button>
-
           <button
             onClick={exportPNG}
             className="px-3 py-1 rounded-md font-medium border border-border bg-transparent text-textDim hover:text-accent transition-all text-sm"
@@ -431,9 +391,7 @@ export default function GraphArea() {
       <div className="mt-2 text-sm text-textDim flex items-center justify-between">
         <div>{status}</div>
         <div>
-          <small>
-            Tip: hold Ctrl and drag (or use mouse wheel / pinch) to zoom.
-          </small>
+          <small>Tip: hold Ctrl and drag (or use mouse wheel / pinch) to zoom.</small>
         </div>
       </div>
     </div>
