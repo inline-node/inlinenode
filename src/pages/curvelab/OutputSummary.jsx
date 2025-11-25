@@ -206,25 +206,40 @@ export default function OutputSummary() {
   }, []);
 
   const downloadFull = () => {
-    const txt = result
+    const now = new Date();
+    const timestamp = now.toLocaleString();
+    const url = window.location.href;
+  
+    const header = [
+      "InlineNode – CurveLab Report",
+      `Generated: ${timestamp}`,
+      `URL: ${url}`,
+      "",
+      "----------------------------------------",
+      ""
+    ].join("\n");
+  
+    const body = result
       ? result.model === "interpolation"
         ? buildInterpolationReportText(result)
         : buildRegressionReportText(result)
       : "No result";
-
+  
+    const txt = header + body;
+  
     const blob = new Blob([txt], {
       type: "text/plain;charset=utf-8",
     });
-    const url = URL.createObjectURL(blob);
+  
+    const downloadUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
+    a.href = downloadUrl;
     a.download = `curvelab_report_${result.model || "report"}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(downloadUrl);
   };
-
   /* ---------------- UI RENDER ---------------- */
 
   if (!result) {
