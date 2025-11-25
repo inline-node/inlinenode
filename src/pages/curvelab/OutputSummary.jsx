@@ -55,7 +55,21 @@ function buildRegressionReportText(result) {
   /* EQUATION (symbolic only!) */
   lines.push("Equation:");
   if (result.model === "linear") {
-    lines.push("  y = m x + c");
+    const coeffs = result.coefficients;
+  
+    // MULTIVARIABLE: coefficients array
+    if (Array.isArray(coeffs) && coeffs.length > 2) {
+      const eqParts = [];
+      for (let i = 1; i < coeffs.length; i++) {
+        eqParts.push(`a${i} X${i}`);
+      }
+      eqParts.push("c");
+      lines.push("  y = " + eqParts.join(" + "));
+    }
+    // SINGLE VARIABLE
+    else {
+      lines.push("  y = m x + c");
+    }
   } else if (result.model === "polynomial") {
     const deg = (result.coefficients || []).length - 1;
     const parts = [];
@@ -77,19 +91,35 @@ function buildRegressionReportText(result) {
   lines.push("Coefficients:");
 
   if (result.model === "linear") {
-    const m =
-      result.coefficients?.m ??
-      result.coefficients?.a ??
-      result.coefficients?.[1];
-    const c =
-      result.coefficients?.c ??
-      result.coefficients?.b ??
-      result.coefficients?.[0];
-    lines.push(`  m = ${formatNum(m)}`);
-    lines.push(`  c = ${formatNum(c)}`);
-    lines.push("");
-    lines.push("Implementation:");
-    lines.push(`  y = ${formatNum(m)} x + ${formatNum(c)}`);
+    const coeffs = result.coefficients;
+  
+    // MULTIVARIABLE CASE
+    if (Array.isArray(coeffs) && coeffs.length > 2) {
+      lines.push("  c = " + formatNum(coeffs[0]));
+      for (let i = 1; i < coeffs.length; i++) {
+        lines.push(`  a${i} = ${formatNum(coeffs[i])}`);
+      }
+      lines.push("");
+      lines.push("Implementation:");
+      const impl = coeffs
+        .map((v, i) => (i === 0 ? `${formatNum(v)}` : `${formatNum(v)} X${i}`))
+        .join(" + ");
+      lines.push(`  y = ${impl}`);
+    }
+  
+    // SINGLE VARIABLE CASE
+    else {
+      const m =
+        coeffs.m ?? coeffs.a ?? (Array.isArray(coeffs) ? coeffs[1] : undefined);
+      const c =
+        coeffs.c ?? coeffs.b ?? (Array.isArray(coeffs) ? coeffs[0] : undefined);
+  
+      lines.push(`  m = ${formatNum(m)}`);
+      lines.push(`  c = ${formatNum(c)}`);
+      lines.push("");
+      lines.push("Implementation:");
+      lines.push(`  y = ${formatNum(m)} x + ${formatNum(c)}`);
+    }
   } else if (result.model === "polynomial") {
     const arr = result.coefficients || [];
     arr.forEach((v, i) => lines.push(`  a${i} = ${formatNum(v)}`));
@@ -266,7 +296,22 @@ export default function OutputSummary() {
   const model = (result.model || "MODEL").toUpperCase();
 
   const renderSymbolicEquation = () => {
-    if (result.model === "linear") return "y = m x + c";
+    if (result.model === "linear") {
+      const coeffs = result.coefficients;
+    
+      // MULTIVARIABLE
+      if (Array.isArray(coeffs) && coeffs.length > 2) {
+        const parts = [];
+        for (let i = 1; i < coeffs.length; i++) {
+          parts.push(`a${i} X${i}`);
+        }
+        parts.push("c");
+        return "y = " + parts.join(" + ");
+      }
+    
+      // SINGLE VARIABLE
+      return "y = m x + c";
+    }
     if (result.model === "polynomial") {
       const deg = (result.coefficients || []).length - 1;
       return (
@@ -288,8 +333,39 @@ export default function OutputSummary() {
 
     /* LINEAR */
     if (result.model === "linear") {
+      const coeffs = result.coefficients;
+      const multiX = Array.isArray(result.x) && result.x.length > 1;
+    
+      // MULTIVARIABLE CASE
+      if (Array.isArray(coeffs) && coeffs.length > 2) {
+        return (
+          <div className="mt-3">
+            <div className="text-sm font-medium">Coefficients</div>
+    
+            <div className="p-2 mb-2 rounded bg-rose-500/20 text-rose-400 text-xs">
+              Multivariable linear regression detected.  
+              The equation uses: X, X2, X3…
+            </div>
+    
+            <div className="mt-1 p-2 bg-surface/30 rounded text-sm">
+              <div>c: {formatNum(coeffs[0])}</div>
+              {coeffs.slice(1).map((v, i) => (
+                <div key={i}>a{i + 1}: {formatNum(v)}</div>
+              ))}
+              <div className="mt-2 font-mono">
+                y = {coeffs.map((v, i) =>
+                  i === 0 ? `${formatNum(v)}` : `${formatNum(v)}X${i}`
+                ).join(" + ")}
+              </div>
+            </div>
+          </div>
+        );
+      }
+    
+      // SINGLE VARIABLE
       const m = coeffs.m ?? coeffs.a ?? coeffs[1];
       const c = coeffs.c ?? coeffs.b ?? coeffs[0];
+    
       return (
         <div className="mt-3">
           <div className="text-sm font-medium">Coefficients</div>
@@ -303,6 +379,7 @@ export default function OutputSummary() {
         </div>
       );
     }
+
 
     /* POLYNOMIAL */
     if (result.model === "polynomial") {
