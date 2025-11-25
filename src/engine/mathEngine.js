@@ -1,7 +1,6 @@
 // src/engine/mathEngine.js
-// Patched to allow negative/zero inputs WITHOUT throwing model errors.
-// Invalid domains produce NaN in computations instead of failing.
-// Adds domainWarnings[] for OutputSummary to display.
+// Multiple-linear support for Linear model (normal equations).
+// Polite messages for models that don't support multivariable yet.
 
 import extractData from "./extractData";
 
@@ -21,6 +20,7 @@ const r2Score = (y, yPred) => {
 const rmse = (residuals) =>
   Math.sqrt(residuals.reduce((acc, r) => acc + r * r, 0) / residuals.length);
 
+/* safe log */
 function safeLog(v, fnName = "log") {
   if (typeof v !== "number" || !isFinite(v)) return NaN;
   if (v <= 0) return NaN;
@@ -61,38 +61,106 @@ function solveLinearSystem(A, b) {
 }
 
 /* ------------------------------------------------------------
-   LINEAR
+   LINEAR (single or multiple X columns)
+   - If single X column: behave exactly as before (m, c).
+   - If multiple X columns: perform multiple linear regression.
 ------------------------------------------------------------ */
 function linearFit(data) {
   const { y, x, xKeys } = data;
-  if (x.length !== 1)
-    return { ok: false, error: "Linear regression requires one X column." };
 
-  const X = x[0];
+  // if no X provided, cannot run linear (should be caught earlier)
+  if (!x || x.length === 0)
+    return { ok: false, error: "No X columns provided for linear regression." };
+
   const n = y.length;
 
-  const mx = mean(X);
-  const my = mean(y);
+  // Single-variable path (keep same outputs for backward compatibility)
+  if (x.length === 1) {
+    const X = x[0];
+    const mx = mean(X);
+    const my = mean(y);
 
-  let num = 0;
-  let den = 0;
-  for (let i = 0; i < n; i++) {
-    num += (X[i] - mx) * (y[i] - my);
-    den += (X[i] - mx) ** 2;
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < n; i++) {
+      num += (X[i] - mx) * (y[i] - my);
+      den += (X[i] - mx) ** 2;
+    }
+    if (den === 0) return { ok: false, error: "Cannot compute slope." };
+
+    const m = num / den;
+    const c = my - m * mx;
+
+    const yPred = X.map((xi) => m * xi + c);
+    const residuals = y.map((yi, i) => yi - yPred[i]);
+
+    return {
+      ok: true,
+      model: "linear",
+      coefficients: { m, c, a: m, b: c },
+      equation: "y = m x + c",
+      stats: {
+        r2: r2Score(y, yPred),
+        rmse: rmse(residuals),
+        n,
+      },
+      yPred,
+      residuals,
+      x: data.x,
+      y: data.y,
+      xKeys: data.xKeys,
+    };
   }
-  if (den === 0) return { ok: false, error: "Cannot compute slope." };
 
-  const m = num / den;
-  const c = my - m * mx;
+  // Multi-variable linear regression path
+  // Build design matrix Xmat: rows = n, cols = (1 + k) where k = number of X columns
+  const k = x.length;
+  const Xmat = Array.from({ length: n }, (_, i) => {
+    const row = [1]; // intercept term
+    for (let j = 0; j < k; j++) {
+      // for safety, coerce to number
+      row.push(Number(x[j][i]));
+    }
+    return row;
+  });
 
-  const yPred = X.map((xi) => m * xi + c);
+  // Build normal equations: (X^T X) * beta = X^T y
+  const XT = Xmat[0].map((_, col) => Xmat.map((r) => r[col])); // transpose
+  const XTX = XT.map((rowI) => XT.map((colJ) => rowI.reduce((s, v, idx) => s + v * colJ[idx], 0)));
+  const XTy = XT.map((row) => row.reduce((s, v, idx) => s + v * y[idx], 0));
+
+  const beta = solveLinearSystem(XTX, XTy);
+  if (!beta)
+    return { ok: false, error: "Singular matrix: multivariable linear regression failed." };
+
+  // beta[0] = intercept (c), beta[1]..beta[k] = coefficients for X1..Xk
+  const intercept = beta[0];
+  const coeffs = beta.slice(1);
+
+  // Compute predictions
+  const yPred = Xmat.map((row) => row.reduce((s, v, idx) => s + v * beta[idx], 0));
   const residuals = y.map((yi, i) => yi - yPred[i]);
+
+  // prepare return coefficients in friendly shape
+  const coeffObj = { c: intercept };
+  coeffs.forEach((val, idx) => {
+    // name them m1, m2, ...
+    coeffObj[`m${idx + 1}`] = val;
+  });
+
+  // also provide array-style coefficients (intercept first) for UI that expects arrays
+  const coeffArray = [intercept, ...coeffs];
+
+  // Build equation string: y = m1 x1 + m2 x2 + ... + c
+  const eqParts = coeffs.map((v, idx) => `${v} * X${idx + 1}`);
+  const eq = `y = ${eqParts.join(" + ")} + ${intercept}`;
 
   return {
     ok: true,
     model: "linear",
-    coefficients: { m, c, a: m, b: c },
-    equation: "y = m x + c",
+    coefficients: coeffObj, // { c, m1, m2, ... } for UI
+    coefficientsArray: coeffArray, // [c, m1, m2,...] (useful in some flows)
+    equation: eq,
     stats: {
       r2: r2Score(y, yPred),
       rmse: rmse(residuals),
@@ -125,7 +193,7 @@ function polynomialFit(data, degree) {
 
   const AT = A[0].map((_, col) => A.map((row) => row[col]));
   const ATA = AT.map((rowI, i) =>
-    AT.map((colJ, j) => rowI.reduce((s, v, k) => s + v * AT[j][k], 0))
+    AT.map((colJ, j) => rowI.reduce((s, v, k) => s + v * colJ[k], 0))
   );
   const ATy = AT.map((row) => row.reduce((s, v, k) => s + v * y[k], 0));
   const coeffs = solveLinearSystem(ATA, ATy) || Array(degree + 1).fill(NaN);
@@ -154,7 +222,6 @@ function polynomialFit(data, degree) {
 
 /* ------------------------------------------------------------
    EXPONENTIAL (safe mode)
-   Y = a e^(bX)
 ------------------------------------------------------------ */
 function exponentialFit(data) {
   const { y, x, xKeys } = data;
@@ -171,8 +238,8 @@ function exponentialFit(data) {
 
   const lin = linearFit({ y: lnY, x: [X], xKeys });
 
-  const b = lin.coefficients.m;
-  const a = Math.exp(lin.coefficients.c);
+  const b = lin.coefficients.m ?? lin.coefficientsArray?.[1];
+  const a = Math.exp(lin.coefficients.c ?? lin.coefficientsArray?.[0] ?? 0);
 
   const yPred = X.map((xi) => a * Math.exp(b * xi));
   const residuals = y.map((yi, i) => yi - yPred[i]);
@@ -197,7 +264,6 @@ function exponentialFit(data) {
 
 /* ------------------------------------------------------------
    POWER LAW (safe)
-   y = a x^b
 ------------------------------------------------------------ */
 function powerLawFit(data) {
   const { y, x, xKeys } = data;
@@ -219,8 +285,8 @@ function powerLawFit(data) {
 
   const lin = linearFit({ y: lnY, x: [lnX], xKeys });
 
-  const b = lin.coefficients.m;
-  const a = Math.exp(lin.coefficients.c);
+  const b = lin.coefficients.m ?? lin.coefficientsArray?.[1];
+  const a = Math.exp(lin.coefficients.c ?? lin.coefficientsArray?.[0] ?? 0);
 
   const yPred = X.map((xi, i) => (xi > 0 ? a * xi ** b : NaN));
   const residuals = y.map((yi, i) => yi - yPred[i]);
@@ -245,7 +311,6 @@ function powerLawFit(data) {
 
 /* ------------------------------------------------------------
    LOGARITHMIC (safe)
-   y = a log_base(x) + b
 ------------------------------------------------------------ */
 function logarithmicFit(data, base) {
   const { y, x, xKeys } = data;
@@ -269,8 +334,8 @@ function logarithmicFit(data, base) {
 
   const lin = linearFit({ y, x: [logX], xKeys });
 
-  const a = lin.coefficients.m;
-  const b = lin.coefficients.c;
+  const a = lin.coefficients.m ?? lin.coefficientsArray?.[1];
+  const b = lin.coefficients.c ?? lin.coefficientsArray?.[0];
 
   const yPred = logX.map((lx) => a * lx + b);
   const residuals = y.map((yi, i) => yi - yPred[i]);
@@ -317,12 +382,21 @@ function interpolationFit(data) {
 
 /* ------------------------------------------------------------
    MAIN ROUTER
+   - If user supplies >1 X and model != linear -> polite message
 ------------------------------------------------------------ */
 export default function runModel(rows, columns, cfg = { model: "linear" }) {
   const extracted = extractData(rows, columns);
   if (!extracted.ok) return extracted;
 
   const model = (cfg && cfg.model) || "linear";
+
+  // if multiple X columns present and model is not linear, politely decline
+  if ((extracted.x?.length || 0) > 1 && model !== "linear") {
+    return {
+      ok: false,
+      error: `The selected model '${model}' does not support multivariable analysis in this version.`,
+    };
+  }
 
   switch (model) {
     case "linear":
