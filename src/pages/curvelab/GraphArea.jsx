@@ -189,7 +189,7 @@ function buildDatasets(result) {
     if (fit && fit.model !== "interpolation") {
       // ONLY draw the primary curve if there is exactly ONE X column
       if (result.x.length === 1) {
-        const { xs, ys } = sampleCurve(result, result.x[0], 300);
+        const { xs, ys } = sampleCurve(fit, xcol, 300);
         if (xs.length) {
           const fitPts = xs.map((xv, idx) => ({
             x: xv,
@@ -269,20 +269,17 @@ export default function GraphArea() {
     const onPreview = (ev) => {
       const p = ev.detail;
       if (!p?.x || !p.y) return;
-
-      setPrimaryResult((prev) => {
-        if (prev?.model !== "preview") return prev;
-
-        setStatus("Preview");
-        setXLabel(p.xKeys[0] || "X");
-
-        return {
-          ok: true,
-          x: p.x,
-          y: p.y,
-          xKeys: p.xKeys,
-          model: "preview",
-        };
+    
+      // Force preview mode on any data change.
+      setStatus("Preview");
+      setXLabel(p.xKeys[0] || "X");
+    
+      setPrimaryResult({
+        ok: true,
+        x: p.x,
+        y: p.y,
+        xKeys: p.xKeys,
+        model: "preview",
       });
     };
 
