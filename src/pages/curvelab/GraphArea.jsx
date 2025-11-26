@@ -216,7 +216,6 @@ export default function GraphArea() {
     const onModelResult = (ev) => {
       const r = ev.detail;
       if (!r) return;
-      //console.log("MODEL RESULT RECEIVED:", r);
 
       if (r.cleared) {
         setPrimaryResult(null);
