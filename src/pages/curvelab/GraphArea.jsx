@@ -186,8 +186,8 @@ function buildDatasets(result) {
       fit = null;
     }
 
-    if (fit && fit.model !== "interpolation") {
-      // ONLY draw the primary curve if there is exactly ONE X column
+    // Do NOT draw fit line during preview mode
+    if (!isPreview && fit && fit.model !== "interpolation") {
       if (result.x.length === 1) {
         const { xs, ys } = sampleCurve(fit, xcol, 300);
         if (xs.length) {
