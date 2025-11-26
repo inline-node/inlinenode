@@ -578,13 +578,41 @@ export default function DataInput() {
                       suppressContentEditableWarning
                       data-r={r}
                       data-c={col.key}
-                      onInput={(e) => handleCellInput(r, col.key, e.currentTarget.innerText)}
+                      className="p-2 min-w-[120px] text-sm outline-none text-text dark:text-darkText bg-surface dark:bg-darkSurface"
+                      
+                      onInput={(e) => {
+                        const el = e.currentTarget;
+                    
+                        // Capture caret position BEFORE React updates
+                        const sel = window.getSelection();
+                        const caretOffset =
+                          sel && sel.rangeCount > 0
+                            ? sel.getRangeAt(0).startOffset
+                            : null;
+                    
+                        // Update table data
+                        handleCellInput(r, col.key, el.innerText);
+                    
+                        // Restore caret after DOM updates
+                        requestAnimationFrame(() => {
+                          try {
+                            const range = document.createRange();
+                            range.setStart(el.childNodes[0] || el, caretOffset || 0);
+                            range.collapse(true);
+                    
+                            const sel2 = window.getSelection();
+                            sel2.removeAllRanges();
+                            sel2.addRange(range);
+                          } catch {}
+                        });
+                      }}
+                    
                       onBlur={(e) => onCellBlur(r, col.key, e)}
                       onKeyDown={(e) => onCellKeyDown(e, r, col.key)}
                       onPaste={(e) => handlePaste(e, r, col.key)}
-                      className="p-2 min-w-[120px] text-sm outline-none text-text dark:text-darkText bg-surface dark:bg-darkSurface"
-                      dangerouslySetInnerHTML={{ __html: row[col.key] ?? "" }}
-                    />
+                    >
+                      {row[col.key] ?? ""}
+                    </div>
                   </td>
                 ))}
               </tr>
