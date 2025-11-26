@@ -130,7 +130,7 @@ function sampleCurve(result, xArr, sampleCount = 300) {
 
 function buildDatasets(result) {
   if (!result?.ok) return [];
-
+  const isPreview = result.model === "preview";
   const xCols = result.x || [];
   const yArr = result.y || [];
   const xKeys = result.xKeys || [];
