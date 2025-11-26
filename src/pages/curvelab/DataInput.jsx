@@ -359,6 +359,18 @@ export default function DataInput() {
      Cell editing
   -------------------------------------------------- */
 
+  // Live cell input handler — updates rows as the user types (keeps same behavior as onBlur)
+  const handleCellInput = (r, cKey, text) => {
+    setRows((prev) => {
+      const copy = prev.slice();
+      while (copy.length <= r) copy.push(Object.fromEntries(columns.map((c) => [c.key, ""])));
+      copy[r] = { ...copy[r], [cKey]: text };
+      // publishTable will persist and dispatch dataPreview + dataUpdated
+      publishTable(copy, columns);
+      return copy;
+    });
+  };
+
   const onCellBlur = (r, key, e) => {
     const val = e.target.innerText.trim();
     setCell(r, key, val);
@@ -566,13 +578,12 @@ export default function DataInput() {
                       suppressContentEditableWarning
                       data-r={r}
                       data-c={col.key}
+                      onInput={(e) => handleCellInput(r, col.key, e.currentTarget.innerText)}
                       onBlur={(e) => onCellBlur(r, col.key, e)}
                       onKeyDown={(e) => onCellKeyDown(e, r, col.key)}
                       onPaste={(e) => handlePaste(e, r, col.key)}
                       className="p-2 min-w-[120px] text-sm outline-none text-text dark:text-darkText bg-surface dark:bg-darkSurface"
-                      dangerouslySetInnerHTML={{
-                        __html: row[col.key] ?? "",
-                      }}
+                      dangerouslySetInnerHTML={{ __html: row[col.key] ?? "" }}
                     />
                   </td>
                 ))}
