@@ -80,9 +80,7 @@ function sampleCurve(result, xArr, sampleCount = 300) {
       if (Array.isArray(coeffs)) {
         yv = coeffs.reduce((s, c, p) => s + c * Math.pow(xv, p), 0);
       }
-    }
-
-    else if (model === "linear") {
+    } else if (model === "linear") {
       // handle both single and multivariable
       if (Array.isArray(coeffs)) {
         // coeffs = [c, m1, m2, ...]
@@ -95,19 +93,13 @@ function sampleCurve(result, xArr, sampleCount = 300) {
         const c = coeffs.c ?? coeffs.b ?? coeffs[0];
         if (m !== undefined && c !== undefined) yv = m * xv + c;
       }
-    }
-
-    else if (model === "exponential") {
+    } else if (model === "exponential") {
       if (coeffs.a != null && coeffs.b != null)
         yv = coeffs.a * Math.exp(coeffs.b * xv);
-    }
-
-    else if (model === "powerlaw") {
+    } else if (model === "powerlaw") {
       if (coeffs.a != null && coeffs.b != null)
         yv = coeffs.a * Math.pow(xv, coeffs.b);
-    }
-
-    else if (model === "logarithmic") {
+    } else if (model === "logarithmic") {
       const base = coeffs.base || result.logBase || "log10";
       const logFn =
         base === "ln" ? Math.log : base === "log2" ? Math.log2 : Math.log10;
@@ -122,7 +114,6 @@ function sampleCurve(result, xArr, sampleCount = 300) {
 
   return { xs, ys };
 }
-
 
 /* ------------------------------------------------------------
    Build datasets (MAIN FEATURE!)
@@ -159,64 +150,38 @@ function buildDatasets(result) {
       order: 2,
     });
 
-    /* --- 2. FIT LINE for this X column --- */
-    let fit = null;
+    /* --- 2. FIT LINE (using primary modelResult, not recomputed) --- */
+    if (!isPreview && result.model !== "interpolation" && i === 0) {
+      const { xs, ys } = sampleCurve(result, xcol, 300);
 
-    try {
-      // Create synthetic table for this column only
-      const rows = xcol.map((xv, idx) => ({
-        Y: yArr[idx],
-        X: xv,
-      }));
+      if (xs.length) {
+        const fitPts = xs.map((xv, idx) => ({
+          x: xv,
+          y: ys[idx],
+        }));
 
-      const cols = [
-        { key: "Y", label: "Y" },
-        { key: "X", label: labelX },
-      ];
-
-      const cfg =
-        window.__curvelab_modelConfig ||
-        JSON.parse(localStorage.getItem("curvelab.modelConfig") || "{}");
-
-      if (cfg?.model) {
-        const out = runModel(rows, cols, cfg);
-        if (out?.ok) fit = out;
-      }
-    } catch {
-      fit = null;
-    }
-
-    // Do NOT draw fit line during preview mode
-    if (!isPreview && fit && fit.model !== "interpolation") {
-      if (result.x.length === 1) {
-        const { xs, ys } = sampleCurve(fit, xcol, 300);
-        if (xs.length) {
-          const fitPts = xs.map((xv, idx) => ({
-            x: xv,
-            y: ys[idx],
-          }));
-          datasets.push({
-            label: `Fit — ${xKeys[0] || "X"}`,
-            data: fitPts,
-            showLine: true,
-            fill: false,
-            borderColor: "#3b82f6",
-            backgroundColor: "#3b82f6",
-            pointRadius: 0,
-            tension: result.model === "linear" ? 0 : 0.25,
-            borderWidth: 2,
-            order: 1,
-          });
-        }
+        datasets.push({
+          label: `Fit — ${xKeys[0] || "X"}`,
+          data: fitPts,
+          showLine: true,
+          fill: false,
+          borderColor: "#3b82f6",
+          backgroundColor: "#3b82f6",
+          pointRadius: 0,
+          tension: result.model === "linear" ? 0 : 0.25,
+          borderWidth: 2,
+          order: 1,
+        });
       }
     }
 
     /* --- 3. Interpolation (only for X1) --- */
     if (result.model === "interpolation" && i === 0) {
-      const pts = result.points?.map((p) => ({
-        x: Number(p.x),
-        y: Number(p.y),
-      })) || scatter;
+      const pts =
+        result.points?.map((p) => ({
+          x: Number(p.x),
+          y: Number(p.y),
+        })) || scatter;
 
       datasets.push({
         label: `Interpolation — ${labelX}`,
@@ -251,6 +216,7 @@ export default function GraphArea() {
     const onModelResult = (ev) => {
       const r = ev.detail;
       if (!r) return;
+      //console.log("MODEL RESULT RECEIVED:", r);
 
       if (r.cleared) {
         setPrimaryResult(null);
@@ -269,11 +235,11 @@ export default function GraphArea() {
     const onPreview = (ev) => {
       const p = ev.detail;
       if (!p?.x || !p.y) return;
-    
+
       // Force preview mode on any data change.
       setStatus("Preview");
       setXLabel(p.xKeys[0] || "X");
-    
+
       setPrimaryResult({
         ok: true,
         x: p.x,
@@ -331,7 +297,11 @@ export default function GraphArea() {
       },
       zoom: {
         pan: { enabled: true, mode: "xy", modifierKey: "ctrl" },
-        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "xy" },
+        zoom: {
+          wheel: { enabled: true },
+          pinch: { enabled: true },
+          mode: "xy",
+        },
       },
     },
     scales: {
