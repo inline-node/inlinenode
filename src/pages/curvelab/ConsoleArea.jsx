@@ -21,6 +21,7 @@ export default function ConsoleArea() {
   ------------------------- */
   const handleClear = () => {
     setLines([]);
+    localStorage.setItem("curvelab.logs", "[]");
     const t = new Date().toLocaleTimeString();
     addMessage(`[${t}] Console cleared.`);
   };
@@ -39,6 +40,7 @@ export default function ConsoleArea() {
       localStorage.removeItem("curvelab.rows");
       localStorage.removeItem("curvelab.columns");
       localStorage.removeItem("curvelab.modelConfig");
+      localStorage.removeItem("curvelab.logs");
     } catch (e) {}
 
     setLines([]);
@@ -70,9 +72,21 @@ export default function ConsoleArea() {
     window.addEventListener("curvelab:console", handler);
 
     addMessage(`[${new Date().toLocaleTimeString()}] Console ready.`);
+    try {
+      const stored = JSON.parse(localStorage.getItem("curvelab.logs") || "[]");
+      if (stored.length) {
+        setLines(stored);
+      }
+    } catch {}
 
     return () => window.removeEventListener("curvelab:console", handler);
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("curvelab.logs", JSON.stringify(lines));
+    } catch {}
+  }, [lines]);
 
   /* Auto-scroll */
   useEffect(() => {

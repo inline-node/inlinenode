@@ -211,6 +211,13 @@ export default function GraphArea() {
   const [status, setStatus] = useState("No data yet");
   const [xLabel, setXLabel] = useState("X");
   const [yLabel] = useState("Y");
+  const [themeKey, setThemeKey] = useState(0);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("curvelab.graphStatus", status);
+    } catch {}
+  }, [status]);
 
   useEffect(() => {
     const onModelResult = (ev) => {
@@ -255,6 +262,37 @@ export default function GraphArea() {
       window.removeEventListener("curvelab:modelResult", onModelResult);
       window.removeEventListener("curvelab:dataPreview", onPreview);
     };
+  }, []);
+
+  useEffect(() => {
+    const savedStatus = localStorage.getItem("curvelab.graphStatus");
+    if (savedStatus) setStatus(savedStatus);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("curvelab.modelResult");
+      if (saved) {
+        const r = JSON.parse(saved);
+        setPrimaryResult(r);
+        setStatus(`Computed — ${r.model}`);
+        if (r.xKeys?.length) setXLabel(r.xKeys[0]);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      // whenever the <html> class changes (dark ↔ light), bump key
+      setThemeKey((k) => k + 1);
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -343,7 +381,12 @@ export default function GraphArea() {
       </div>
 
       <div className="flex-1 border rounded bg-surface dark:bg-darkSurface p-1">
-        <Scatter ref={chartRef} data={{ datasets }} options={options} />
+        <Scatter
+          key={themeKey}
+          ref={chartRef}
+          data={{ datasets }}
+          options={options}
+        />
       </div>
 
       <div className="mt-2 text-sm text-textDim">{status}</div>
