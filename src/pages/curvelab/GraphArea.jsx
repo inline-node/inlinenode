@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
   Chart as ChartJS,
   LinearScale,
@@ -119,12 +119,13 @@ function sampleCurve(result, xArr, sampleCount = 300) {
    Build datasets (MAIN FEATURE!)
 ------------------------------------------------------------ */
 
-function buildDatasets(result) {
+function buildDatasets(result, xLabelsFinal) {
   if (!result?.ok) return [];
   const isPreview = result.model === "preview";
   const xCols = result.x || [];
   const yArr = result.y || [];
   const xKeys = result.xKeys || [];
+  const columns = result._sourceColumns || [];
 
   const datasets = [];
 
@@ -140,7 +141,7 @@ function buildDatasets(result) {
     }));
 
     datasets.push({
-      label: `Data — ${labelX}`,
+      label: `Data — ${xLabelsFinal[i]}`,
       data: scatter,
       showLine: false,
       pointRadius: 3,
@@ -151,7 +152,13 @@ function buildDatasets(result) {
     });
 
     /* --- 2. FIT LINE (using primary modelResult, not recomputed) --- */
-    if (!isPreview && result.model !== "interpolation" && i === 0) {
+    if (
+      !isPreview &&
+      result.model !== "interpolation" &&
+      Array.isArray(result.x) &&
+      result.x.length === 1 &&
+      i === 0
+    ) {
       const { xs, ys } = sampleCurve(result, xcol, 300);
 
       if (xs.length) {
@@ -161,7 +168,7 @@ function buildDatasets(result) {
         }));
 
         datasets.push({
-          label: `Fit — ${xKeys[0] || "X"}`,
+          label: `Fit — ${xLabelsFinal[0]}`,
           data: fitPts,
           showLine: true,
           fill: false,
@@ -184,7 +191,7 @@ function buildDatasets(result) {
         })) || scatter;
 
       datasets.push({
-        label: `Interpolation — ${labelX}`,
+        label: `Interpolation — ${xLabelsFinal[0]}`,
         data: pts.sort((a, b) => a.x - b.x),
         showLine: true,
         borderColor: "#3b82f6",
@@ -213,6 +220,29 @@ export default function GraphArea() {
   const [yLabel] = useState("Y");
   const [themeKey, setThemeKey] = useState(0);
 
+  // Resolve human-readable X labels from result (keys → labels)
+  const xLabelsFinal = useMemo(() => {
+    if (!primaryResult) return [];
+
+    const xKeys = primaryResult.xKeys || [];
+    const columns = primaryResult._sourceColumns || [];
+
+    return xKeys.map((key, i) => {
+      const col = columns.find((c) => c.key === key);
+      return col?.label || key || `X${i + 1}`;
+    });
+  }, [primaryResult]);
+  // Resolve human-readable Y label from result (key → label)
+  const yLabelFinal = useMemo(() => {
+    if (!primaryResult) return "Y";
+
+    const yKey = primaryResult.yKey;
+    const columns = primaryResult._sourceColumns || [];
+
+    const col = columns.find((c) => c.key === yKey);
+    return col?.label || yKey || "Y";
+  }, [primaryResult]);
+
   useEffect(() => {
     try {
       localStorage.setItem("curvelab.graphStatus", status);
@@ -236,6 +266,11 @@ export default function GraphArea() {
       setStatus(`Computed — ${r.model}`);
 
       if (r.xKeys?.length) setXLabel(r.xKeys[0]);
+      if (r.xKeys && r.xKeys.length > 0) {
+        setXLabel(r.xKeys[0]);
+      } else {
+        setXLabel("X");
+      }
     };
 
     const onPreview = (ev) => {
@@ -244,7 +279,7 @@ export default function GraphArea() {
 
       // Force preview mode on any data change.
       setStatus("Preview");
-      setXLabel(p.xKeys[0] || "X");
+      //setXLabel(p.xKeys[0] || "X");
 
       setPrimaryResult({
         ok: true,
@@ -298,7 +333,7 @@ export default function GraphArea() {
   useEffect(() => {
     if (!primaryResult) return setDatasets([]);
 
-    setDatasets(buildDatasets(primaryResult));
+    setDatasets(buildDatasets(primaryResult, xLabelsFinal));
   }, [primaryResult]);
 
   const exportPNG = () => {
@@ -344,12 +379,12 @@ export default function GraphArea() {
     scales: {
       x: {
         type: "linear",
-        title: { display: true, text: xLabel },
+        title: { display: true, text: xLabelsFinal?.[0] || "X" },
         grid: { color: gridColor() },
       },
       y: {
         type: "linear",
-        title: { display: true, text: yLabel },
+        title: { display: true, text: yLabelFinal },
         grid: { color: gridColor() },
       },
     },

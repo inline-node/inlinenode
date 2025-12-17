@@ -34,7 +34,14 @@ export default function extractData(rows, columns) {
   }
 
   // Detect X columns (keys starting with X, X1, X2, etc.)
-  let xKeys = colKeys.filter((k) => k !== yKey);
+  // Detect X columns by position (preserve table order)
+  let xKeys;
+  if (yIndex >= 0) {
+    xKeys = colKeys.filter((_, i) => i !== yIndex);
+  } else {
+    // fallback: first column is Y
+    xKeys = colKeys.slice(1);
+  }
 
   if (xKeys.length === 0) {
     warnings.push("No X columns found. At least one X column is required.");
@@ -122,6 +129,7 @@ export default function extractData(rows, columns) {
     y: Y,
     x: Xcols,
     xKeys,
+    yKey,
     rowsIndexMap,
     isMultivariable: Xcols.length > 1,
   };

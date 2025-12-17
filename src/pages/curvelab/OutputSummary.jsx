@@ -55,19 +55,19 @@ function buildRegressionReportText(result) {
   /* EQUATION (symbolic only!) */
   lines.push("Equation:");
   if (result.model === "linear") {
-    const coeffs = result.coefficients;
-  
-    // MULTIVARIABLE: coefficients array
-    if (Array.isArray(coeffs) && coeffs.length > 2) {
-      const eqParts = [];
-      for (let i = 1; i < coeffs.length; i++) {
-        eqParts.push(`a${i} X${i}`);
+    const coeffsArr = Array.isArray(result.coefficientsArray)
+      ? result.coefficientsArray
+      : null;
+
+    const isMulti = coeffsArr && coeffsArr.length > 2;
+
+    if (isMulti) {
+      const terms = [];
+      for (let i = 1; i < coeffsArr.length; i++) {
+        terms.push(`m${i}x${i}`);
       }
-      eqParts.push("c");
-      lines.push("  y = " + eqParts.join(" + "));
-    }
-    // SINGLE VARIABLE
-    else {
+      lines.push(`  y = c + ${terms.join(" + ")}`);
+    } else {
       lines.push("  y = m x + c");
     }
   } else if (result.model === "polynomial") {
@@ -91,34 +91,40 @@ function buildRegressionReportText(result) {
   lines.push("Coefficients:");
 
   if (result.model === "linear") {
-    const coeffs = result.coefficients;
-  
-    // MULTIVARIABLE CASE
-    if (Array.isArray(coeffs) && coeffs.length > 2) {
-      lines.push("  c = " + formatNum(coeffs[0]));
-      for (let i = 1; i < coeffs.length; i++) {
-        lines.push(`  a${i} = ${formatNum(coeffs[i])}`);
+    const coeffsArr = Array.isArray(result.coefficientsArray)
+      ? result.coefficientsArray
+      : null;
+
+    const isMulti = coeffsArr && coeffsArr.length > 2;
+
+    /* =======================
+      Coefficients
+      ======================= */
+    lines.push("Coefficients");
+
+    if (isMulti) {
+      lines.push(`c (intercept): ${formatNum(coeffsArr[0])}`);
+
+      for (let i = 1; i < coeffsArr.length; i++) {
+        lines.push(`m${i} (X${i}): ${formatNum(coeffsArr[i])}`);
       }
+
       lines.push("");
-      lines.push("Implementation:");
-      const impl = coeffs
-        .map((v, i) => (i === 0 ? `${formatNum(v)}` : `${formatNum(v)} X${i}`))
-        .join(" + ");
-      lines.push(`  y = ${impl}`);
-    }
-  
-    // SINGLE VARIABLE CASE
-    else {
+      const expanded = [];
+      for (let i = 1; i < coeffsArr.length; i++) {
+        expanded.push(`${formatNum(coeffsArr[i])}x${i}`);
+      }
+      lines.push(`y = ${formatNum(coeffsArr[0])} + ${expanded.join(" + ")}`);
+    } else {
       const m =
-        coeffs.m ?? coeffs.a ?? (Array.isArray(coeffs) ? coeffs[1] : undefined);
+        result.coefficients?.m ?? result.coefficients?.a ?? coeffsArr?.[1];
       const c =
-        coeffs.c ?? coeffs.b ?? (Array.isArray(coeffs) ? coeffs[0] : undefined);
-  
-      lines.push(`  m = ${formatNum(m)}`);
-      lines.push(`  c = ${formatNum(c)}`);
+        result.coefficients?.c ?? result.coefficients?.b ?? coeffsArr?.[0];
+
+      lines.push(`m: ${formatNum(m)}`);
+      lines.push(`c: ${formatNum(c)}`);
       lines.push("");
-      lines.push("Implementation:");
-      lines.push(`  y = ${formatNum(m)} x + ${formatNum(c)}`);
+      lines.push(`y = ${formatNum(m)}x + ${formatNum(c)}`);
     }
   } else if (result.model === "polynomial") {
     const arr = result.coefficients || [];
@@ -212,6 +218,7 @@ export default function OutputSummary() {
   useEffect(() => {
     const handler = (e) => {
       const r = e.detail;
+      console.log("MODEL RESULT (debug):", r);
       if (!r) return;
 
       if (r.cleared) {
@@ -297,21 +304,24 @@ export default function OutputSummary() {
 
   const renderSymbolicEquation = () => {
     if (result.model === "linear") {
-      const coeffs = result.coefficients;
-    
-      // MULTIVARIABLE
+      // Use array-form coefficients if provided by engine (coefficientsArray),
+      // else fall back to coefficients object for single-variable outputs.
+      const coeffs = Array.isArray(result.coefficientsArray)
+        ? result.coefficientsArray
+        : result.coefficients;
+
       if (Array.isArray(coeffs) && coeffs.length > 2) {
-        const parts = [];
+        const parts = ["c"];
         for (let i = 1; i < coeffs.length; i++) {
-          parts.push(`a${i} X${i}`);
+          const name = i === 1 ? "x" : `x${i - 1}`;
+          parts.push(`m${i}·${name}`);
         }
-        parts.push("c");
         return "y = " + parts.join(" + ");
       }
-    
-      // SINGLE VARIABLE
+      // single variable fallback
       return "y = m x + c";
     }
+
     if (result.model === "polynomial") {
       const deg = (result.coefficients || []).length - 1;
       return (
@@ -330,42 +340,122 @@ export default function OutputSummary() {
   const renderCoefficientsUI = () => {
     if (!result.coefficients) return null;
     const coeffs = result.coefficients;
+    // Prefer array if present, else object
+    const coeffsArr = Array.isArray(result.coefficientsArray)
+      ? result.coefficientsArray
+      : null;
+    const coeffsObj = coeffsArr ? null : result.coefficients || null;
 
     /* LINEAR */
     if (result.model === "linear") {
-      const coeffs = result.coefficients;
       const multiX = Array.isArray(result.x) && result.x.length > 1;
-    
-      // MULTIVARIABLE CASE
-      if (Array.isArray(coeffs) && coeffs.length > 2) {
+
+      // MULTIVARIABLE (array-form)
+      if (coeffsArr && coeffsArr.length > 2) {
         return (
           <div className="mt-3">
             <div className="text-sm font-medium">Coefficients</div>
-    
-            <div className="p-2 mb-2 rounded bg-rose-500/20 text-rose-400 text-xs">
-              Multivariable linear regression detected.  
-              The equation uses: X, X2, X3…
+
+            <div className="mt-1 p-2 bg-surface/30 rounded text-sm font-mono">
+              <div>c (intercept): {formatNum(coeffsArr[0])}</div>
+              {coeffsArr.slice(1).map((v, i) => {
+                const name = i === 0 ? "x" : `x${i}`;
+                return (
+                  <div key={i}>
+                    m{i + 1} ({name}): {formatNum(v)}
+                  </div>
+                );
+              })}
             </div>
-    
-            <div className="mt-1 p-2 bg-surface/30 rounded text-sm">
-              <div>c: {formatNum(coeffs[0])}</div>
-              {coeffs.slice(1).map((v, i) => (
-                <div key={i}>a{i + 1}: {formatNum(v)}</div>
-              ))}
-              <div className="mt-2 font-mono">
-                y = {coeffs.map((v, i) =>
-                  i === 0 ? `${formatNum(v)}` : `${formatNum(v)}X${i}`
-                ).join(" + ")}
-              </div>
+
+            <div className="mt-1 p-2 bg-surface/30 rounded text-sm font-mono">
+              {(() => {
+                const intercept = formatNum(coeffsArr[0]);
+                const parts = [];
+                for (let i = 1; i < coeffsArr.length; i++) {
+                  const name = i === 1 ? "x" : `x${i - 1}`;
+                  parts.push(`${formatNum(coeffsArr[i])}·${name}`);
+                }
+                return `y = ${intercept} + ${parts.join(" + ")}`;
+              })()}
+            </div>
+
+            <div className="mt-2 text-xs text-textDim">
+              No fit line shown because multivariable regression cannot be
+              plotted in 2D.
             </div>
           </div>
         );
       }
-    
-      // SINGLE VARIABLE
-      const m = coeffs.m ?? coeffs.a ?? coeffs[1];
-      const c = coeffs.c ?? coeffs.b ?? coeffs[0];
-    
+
+      // MULTIVARIABLE (object-form fallback) — some older flows may produce coeff object
+      if (
+        !coeffsArr &&
+        coeffsObj &&
+        Object.keys(coeffsObj).some((k) => /^m\d+$/i.test(k))
+      ) {
+        // build array-like view for display without changing engine
+        const keys = Object.keys(coeffsObj).filter((k) => k !== "c");
+        // sort m1,m2,m3...
+        keys.sort((a, b) => {
+          const na = a.match(/^m(\d+)$/i)?.[1] || "0";
+          const nb = b.match(/^m(\d+)$/i)?.[1] || "0";
+          return Number(na) - Number(nb);
+        });
+        return (
+          <div className="mt-3">
+            <div className="text-sm font-medium">Coefficients</div>
+            <div className="mt-1 p-2 bg-surface/30 rounded text-sm font-mono">
+              <div>
+                c (intercept):{" "}
+                {formatNum(coeffsObj.c ?? coeffsObj.intercept ?? "—")}
+              </div>
+              {keys.map((k, idx) => (
+                <div key={k}>
+                  {k}: {formatNum(coeffsObj[k])}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 text-sm font-medium">Expanded Equation</div>
+            <div className="mt-1 p-2 bg-surface/30 rounded text-sm font-mono">
+              {(() => {
+                const intercept = formatNum(
+                  coeffsObj.c ?? coeffsObj.intercept ?? 0
+                );
+                const parts = keys.map(
+                  (k) => `${formatNum(coeffsObj[k])}·${k}`
+                );
+                return `y = ${intercept} + ${parts.join(" + ")}`;
+              })()}
+            </div>
+
+            <div className="mt-2 text-xs text-textDim">
+              No fit line shown because multivariable regression cannot be
+              plotted in 2D.
+            </div>
+          </div>
+        );
+      }
+
+      // SINGLE VARIABLE fallback (original path)
+      const singleM = coeffsObj
+        ? coeffsObj.m ?? coeffsObj.a ?? undefined
+        : undefined;
+      const singleC = coeffsObj
+        ? coeffsObj.c ?? coeffsObj.b ?? undefined
+        : undefined;
+      const m =
+        singleM ??
+        (Array.isArray(result.coefficients)
+          ? result.coefficients[1]
+          : undefined);
+      const c =
+        singleC ??
+        (Array.isArray(result.coefficients)
+          ? result.coefficients[0]
+          : undefined);
+
       return (
         <div className="mt-3">
           <div className="text-sm font-medium">Coefficients</div>
@@ -379,7 +469,6 @@ export default function OutputSummary() {
         </div>
       );
     }
-
 
     /* POLYNOMIAL */
     if (result.model === "polynomial") {
