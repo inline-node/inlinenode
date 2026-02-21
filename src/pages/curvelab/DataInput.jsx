@@ -479,12 +479,12 @@ export default function DataInput() {
   -------------------------------------------------- */
 
   return (
-    <section className="p-3 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-semibold">Data</h2>
+    <section className="p-3 h-full flex flex-col min-w-0">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h2 className="hidden md:block text-lg font-semibold">Data</h2>
 
-        <div className="flex items-center gap-2 text-sm">
-          <label className="px-3 py-[6px] rounded-md font-medium cursor-pointer border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all">
+        <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-stretch gap-2 text-sm w-full sm:w-auto">
+          <label className="h-12 sm:h-auto px-2 sm:px-3 py-2 sm:py-[6px] rounded-md font-medium cursor-pointer border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all text-center">
             Import
             <input
               type="file"
@@ -500,7 +500,7 @@ export default function DataInput() {
 
           <button
             onClick={addColumn}
-            className="px-3 py-[6px] rounded-md font-medium border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all"
+            className="h-12 sm:h-auto px-2 sm:px-3 py-2 sm:py-[6px] rounded-md font-medium border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all text-center"
           >
             + Column
           </button>
@@ -515,14 +515,14 @@ export default function DataInput() {
               publishTable(next, columns);
               logConsole("Row added", [`New row index: ${next.length - 1}`]);
             }}
-            className="px-3 py-[6px] rounded-md font-medium border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all"
+            className="h-12 sm:h-auto px-2 sm:px-3 py-2 sm:py-[6px] rounded-md font-medium border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all text-center"
           >
             + Row
           </button>
 
           <button
             onClick={handleFit}
-            className="px-4 py-2 rounded-md font-medium bg-[#a9df05] dark:bg-[#a9df05] text-gray-900 hover:opacity-95 transition-all"
+            className="h-12 sm:h-auto px-3 sm:px-4 py-2 rounded-md font-medium bg-[#a9df05] dark:bg-[#a9df05] text-gray-900 hover:opacity-95 transition-all text-center"
             title="Fit curve using selected model"
           >
             Fit Curve
@@ -530,7 +530,7 @@ export default function DataInput() {
 
           <button
             onClick={resetTable}
-            className="px-3 py-2 rounded-md font-medium border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all"
+            className="h-12 sm:h-auto px-2 sm:px-3 py-2 rounded-md font-medium border border-border dark:border-darkBorder bg-transparent text-textDim dark:text-darkTextDim hover:text-accent dark:hover:text-darkAccent transition-all text-center"
           >
             Reset
           </button>
@@ -538,17 +538,17 @@ export default function DataInput() {
       </div>
 
       {/* TABLE */}
-      <div className="flex-1 overflow-auto border rounded" ref={tableRef}>
-        <table className="min-w-full border-collapse table-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden md:overflow-x-auto border rounded" ref={tableRef}>
+        <table className="w-full md:min-w-full border-collapse table-fixed md:table-auto">
           <thead>
             <tr>
-              <th className="p-1 sticky top-0 bg-surface dark:bg-darkSurface text-text dark:text-darkText border-r border-border dark:border-darkBorder">
+              <th className="w-10 p-1 sticky top-0 bg-surface dark:bg-darkSurface text-text dark:text-darkText border-r border-border dark:border-darkBorder">
                 N
               </th>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="p-1 sticky top-0 bg-surface dark:bg-darkSurface text-text dark:text-darkText border-r border-border dark:border-darkBorder text-left"
+                  className="p-1 sticky top-0 bg-surface dark:bg-darkSurface text-text dark:text-darkText border-r border-border dark:border-darkBorder text-left break-words"
                 >
                   {col.label}
                 </th>
@@ -562,7 +562,7 @@ export default function DataInput() {
                 key={r}
                 className="border-t border-border dark:border-darkBorder"
               >
-                <td className="p-1 text-sm border-r border-border dark:border-darkBorder">
+                <td className="w-10 p-1 text-sm border-r border-border dark:border-darkBorder">
                   {r + 1}
                 </td>
 
@@ -578,7 +578,7 @@ export default function DataInput() {
                       suppressContentEditableWarning
                       data-r={r}
                       data-c={col.key}
-                      className="p-2 min-w-[120px] text-sm outline-none text-text dark:text-darkText bg-surface dark:bg-darkSurface"
+                      className="p-2 min-w-0 md:min-w-[120px] w-full text-sm outline-none text-text dark:text-darkText bg-surface dark:bg-darkSurface break-words"
                       
                       onInput={(e) => {
                         const el = e.currentTarget;

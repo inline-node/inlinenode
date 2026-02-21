@@ -93,10 +93,8 @@ function MobileCurveLab() {
     { key: "console", label: "Console", component: <ConsoleArea /> },
   ];
 
-  const current = tabs.find((t) => t.key === activeTab);
-
   return (
-    <div className="absolute inset-x-0 top-[60px] bottom-[56px] flex flex-col bg-background dark:bg-darkBackground overflow-y-auto">
+    <div className="absolute inset-x-0 top-[60px] bottom-[56px] flex flex-col bg-background dark:bg-darkBackground overflow-y-auto overflow-x-hidden">
       {/* MOBILE TAB BAR — smaller height */}
       <div className="flex justify-around border-b border-border dark:border-darkBorder bg-surface dark:bg-darkSurface sticky top-0 z-10">
         {tabs.map((tab) => (
@@ -114,8 +112,17 @@ function MobileCurveLab() {
         ))}
       </div>
 
-      {/* ACTIVE TAB CONTENT — removed flex-1 to avoid giant blank space */}
-      <div className="p-2 overflow-x-auto">{current?.component}</div>
+      {/* Keep all tabs mounted so mobile console keeps receiving log events */}
+      <div className="p-2">
+        {tabs.map((tab) => (
+          <div
+            key={tab.key}
+            className={activeTab === tab.key ? "block" : "hidden"}
+          >
+            {tab.component}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
