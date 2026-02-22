@@ -7,13 +7,11 @@ import ConsoleArea from "./curvelab/ConsoleArea";
 
 export default function CurveLab() {
   const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
 
   useEffect(() => {
     const checkWidth = () => {
       const width = window.innerWidth;
-      setIsMobile(width < 768);
-      setIsTablet(width >= 768 && width < 1024);
+      setIsMobile(width < 1024);
     };
     checkWidth();
     window.addEventListener("resize", checkWidth);
@@ -22,13 +20,7 @@ export default function CurveLab() {
 
   return (
     <Layout>
-      {isMobile ? (
-        <MobileCurveLab />
-      ) : isTablet ? (
-        <TabletCurveLab />
-      ) : (
-        <DesktopCurveLab />
-      )}
+      {isMobile ? <MobileCurveLab /> : <DesktopCurveLab />}
     </Layout>
   );
 }
@@ -54,30 +46,6 @@ function DesktopCurveLab() {
       <div className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
         <ConsoleArea />
       </div>
-    </div>
-  );
-}
-
-/* ---------------- TABLET ---------------- */
-function TabletCurveLab() {
-  return (
-    <div
-      className="absolute inset-x-0 top-[60px] bottom-[56px]
-                 grid grid-rows-[auto_auto_auto_auto] grid-cols-1 gap-[0.5rem]
-                 bg-background text-text dark:bg-darkBackground dark:text-darkText p-[0.5rem] overflow-y-auto"
-    >
-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
-        <GraphArea />
-      </section>
-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
-        <DataInput />
-      </section>
-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
-        <OutputSummary />
-      </section>
-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
-        <ConsoleArea />
-      </section>
     </div>
   );
 }
