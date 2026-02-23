@@ -44,7 +44,7 @@ export default function DataInput() {
     window.dispatchEvent(
       new CustomEvent("curvelab:console", {
         detail: { message, extra },
-      })
+      }),
     );
   };
 
@@ -65,7 +65,7 @@ export default function DataInput() {
     window.dispatchEvent(
       new CustomEvent("curvelab:dataUpdated", {
         detail: window.__curvelab_table,
-      })
+      }),
     );
 
     try {
@@ -80,7 +80,7 @@ export default function DataInput() {
               x: extracted.x,
               xKeys: extracted.xKeys,
             },
-          })
+          }),
         );
       }
     } catch (e) {}
@@ -95,7 +95,7 @@ export default function DataInput() {
         window.dispatchEvent(
           new CustomEvent("curvelab:modelResult", {
             detail: JSON.parse(savedResult),
-          })
+          }),
         );
         logConsole("Restored previous results");
       }
@@ -208,7 +208,7 @@ export default function DataInput() {
     while (
       grid.length &&
       grid[grid.length - 1].every(
-        (c) => c === null || c === undefined || String(c).trim() === ""
+        (c) => c === null || c === undefined || String(c).trim() === "",
       )
     )
       grid.pop();
@@ -222,11 +222,11 @@ export default function DataInput() {
 
     const firstIsTextCount = firstRow.reduce(
       (s, v) => s + (isNaN(parseFloat(v)) ? 1 : 0),
-      0
+      0,
     );
     const secondNumericCount = secondRow.reduce(
       (s, v) => s + (!isNaN(parseFloat(v)) ? 1 : 0),
-      0
+      0,
     );
 
     const firstMostlyText = firstRow.length
@@ -343,7 +343,7 @@ export default function DataInput() {
         for (let ci = 0; ci < matrix[ri].length; ci++) {
           const colIndex = Math.min(
             columns.length - 1,
-            Math.max(0, startIndex + ci)
+            Math.max(0, startIndex + ci),
           );
           const key = columns[colIndex].key;
           copy[rr][key] = matrix[ri][ci];
@@ -363,7 +363,8 @@ export default function DataInput() {
   const handleCellInput = (r, cKey, text) => {
     setRows((prev) => {
       const copy = prev.slice();
-      while (copy.length <= r) copy.push(Object.fromEntries(columns.map((c) => [c.key, ""])));
+      while (copy.length <= r)
+        copy.push(Object.fromEntries(columns.map((c) => [c.key, ""])));
       copy[r] = { ...copy[r], [cKey]: text };
       // publishTable will persist and dispatch dataPreview + dataUpdated
       publishTable(copy, columns);
@@ -409,7 +410,7 @@ export default function DataInput() {
     window.dispatchEvent(
       new CustomEvent("curvelab:modelResult", {
         detail: { cleared: true },
-      })
+      }),
     );
 
     logConsole("Reset complete", ["Table, graph & results cleared"]);
@@ -453,7 +454,7 @@ export default function DataInput() {
       } catch (e) {}
 
       window.dispatchEvent(
-        new CustomEvent("curvelab:modelResult", { detail: out })
+        new CustomEvent("curvelab:modelResult", { detail: out }),
       );
 
       logConsole(
@@ -462,14 +463,14 @@ export default function DataInput() {
           `ok: ${out.ok}`,
           out.stats?.r2 ? `R² = ${out.stats.r2.toFixed(6)}` : null,
           out.stats?.rmse ? `RMSE = ${out.stats.rmse.toFixed(6)}` : null,
-        ].filter(Boolean)
+        ].filter(Boolean),
       );
     } catch (err) {
       logConsole("Fit failed", [err?.message || String(err)]);
       window.dispatchEvent(
         new CustomEvent("curvelab:modelResult", {
           detail: { ok: false, errors: [err?.message || String(err)] },
-        })
+        }),
       );
     }
   };
@@ -538,7 +539,10 @@ export default function DataInput() {
       </div>
 
       {/* TABLE */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden md:overflow-x-auto border rounded" ref={tableRef}>
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden md:overflow-x-auto border rounded"
+        ref={tableRef}
+      >
         <table className="w-full md:min-w-full border-collapse table-fixed md:table-auto">
           <thead>
             <tr>
@@ -579,34 +583,35 @@ export default function DataInput() {
                       data-r={r}
                       data-c={col.key}
                       className="p-2 min-w-0 md:min-w-[120px] w-full text-sm outline-none text-text dark:text-darkText bg-surface dark:bg-darkSurface break-words"
-                      
                       onInput={(e) => {
                         const el = e.currentTarget;
-                    
+
                         // Capture caret position BEFORE React updates
                         const sel = window.getSelection();
                         const caretOffset =
                           sel && sel.rangeCount > 0
                             ? sel.getRangeAt(0).startOffset
                             : null;
-                    
+
                         // Update table data
                         handleCellInput(r, col.key, el.innerText);
-                    
+
                         // Restore caret after DOM updates
                         requestAnimationFrame(() => {
                           try {
                             const range = document.createRange();
-                            range.setStart(el.childNodes[0] || el, caretOffset || 0);
+                            range.setStart(
+                              el.childNodes[0] || el,
+                              caretOffset || 0,
+                            );
                             range.collapse(true);
-                    
+
                             const sel2 = window.getSelection();
                             sel2.removeAllRanges();
                             sel2.addRange(range);
                           } catch {}
                         });
                       }}
-                    
                       onBlur={(e) => onCellBlur(r, col.key, e)}
                       onKeyDown={(e) => onCellKeyDown(e, r, col.key)}
                       onPaste={(e) => handlePaste(e, r, col.key)}

@@ -18,11 +18,7 @@ export default function CurveLab() {
     return () => window.removeEventListener("resize", checkWidth);
   }, []);
 
-  return (
-    <Layout>
-      {isMobile ? <MobileCurveLab /> : <DesktopCurveLab />}
-    </Layout>
-  );
+  return <Layout>{isMobile ? <MobileCurveLab /> : <DesktopCurveLab />}</Layout>;
 }
 
 /* ---------------- DESKTOP ---------------- */

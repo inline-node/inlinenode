@@ -1,0 +1,61 @@
+diff a/src/pages/CurveLab.jsx b/src/pages/CurveLab.jsx	(rejected hunks)
+@@ -10 +9,0 @@ export default function CurveLab() {
+-  const [isTablet, setIsTablet] = useState(false);
+@@ -15,2 +14 @@ export default function CurveLab() {
+-      setIsMobile(width < 768);
+-      setIsTablet(width >= 768 && width < 1024);
++      setIsMobile(width < 1024);
+@@ -25,7 +23 @@ export default function CurveLab() {
+-      {isMobile ? (
+-        <MobileCurveLab />
+-      ) : isTablet ? (
+-        <TabletCurveLab />
+-      ) : (
+-        <DesktopCurveLab />
+-      )}
++      {isMobile ? <MobileCurveLab /> : <DesktopCurveLab />}
+@@ -61,24 +52,0 @@ function DesktopCurveLab() {
+-/* ---------------- TABLET ---------------- */
+-function TabletCurveLab() {
+-  return (
+-    <div
+-      className="absolute inset-x-0 top-[60px] bottom-[56px]
+-                 grid grid-rows-[auto_auto_auto_auto] grid-cols-1 gap-[0.5rem]
+-                 bg-background text-text dark:bg-darkBackground dark:text-darkText p-[0.5rem] overflow-y-auto"
+-    >
+-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
+-        <GraphArea />
+-      </section>
+-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
+-        <DataInput />
+-      </section>
+-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
+-        <OutputSummary />
+-      </section>
+-      <section className="border border-border dark:border-darkBorder rounded bg-surface dark:bg-darkSurface overflow-hidden">
+-        <ConsoleArea />
+-      </section>
+-    </div>
+-  );
+-}
+-
+@@ -96,2 +63,0 @@ function MobileCurveLab() {
+-  const current = tabs.find((t) => t.key === activeTab);
+-
+@@ -99 +65 @@ function MobileCurveLab() {
+-    <div className="absolute inset-x-0 top-[60px] bottom-[56px] flex flex-col bg-background dark:bg-darkBackground overflow-y-auto">
++    <div className="absolute inset-x-0 top-[60px] bottom-[56px] flex flex-col bg-background dark:bg-darkBackground overflow-y-auto overflow-x-hidden">
+@@ -117,2 +83,11 @@ function MobileCurveLab() {
+-      {/* ACTIVE TAB CONTENT — removed flex-1 to avoid giant blank space */}
+-      <div className="p-2 overflow-x-auto">{current?.component}</div>
++      {/* Keep all tabs mounted so mobile console keeps receiving log events */}
++      <div className="p-2">
++        {tabs.map((tab) => (
++          <div
++            key={tab.key}
++            className={activeTab === tab.key ? "block" : "hidden"}
++          >
++            {tab.component}
++          </div>
++        ))}
++      </div>
